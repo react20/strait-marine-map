@@ -1802,10 +1802,10 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.get
 })();
 
 
-// ---------- 7-day weather forecast on the map (Environment Canada city forecasts) ----------
+// ---------- Today's weather forecast on the map (Environment Canada city forecasts) ----------
 const WX_TOWNS = /^(Nanaimo|Gibsons|Sechelt|Qualicum Beach|West Vancouver|Richmond|Vancouver)$/;
 const wxLayer = L.layerGroup();
-const setWxStatus = addOverlay('wx7', 'Weather forecast · 7 days', 'Environment Canada town forecasts: sky, temperature, chance of rain', wxLayer, true);
+const setWxStatus = addOverlay('wx7', 'Weather forecast · today', 'Environment Canada town forecasts: temperature and chance of rain. Tap a town for details; the calendar has 14 days', wxLayer, true);
 let wxData = [], wxDay = null;
 function wxPeriods(props){
   // Group the forecast periods into days: {day:'Wednesday', d:{...}, n:{...}}
