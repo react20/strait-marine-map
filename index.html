@@ -128,6 +128,41 @@ section{display:flex;flex-direction:column}
 .gbtn{font:600 13px var(--sans);padding:6px 12px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--fg);cursor:pointer}
 .acct-who{color:var(--muted)}
 .linkbtn{font:inherit;font-size:12px;background:none;border:0;color:var(--pin);cursor:pointer;padding:0;text-decoration:underline}
+.calbtn{margin-bottom:8px;font:600 13px var(--sans);padding:7px 10px;border:1px solid var(--pin);border-radius:4px;background:var(--panel);color:var(--pin);cursor:pointer;align-self:flex-start}
+.cal{position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(12px,env(safe-area-inset-top,0px)) 10px 24px}
+.cal-card{background:var(--panel);color:var(--fg);width:min(760px,100%);border-radius:8px;border-top:6px solid var(--pin);padding:14px 14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.cal-top{display:flex;justify-content:space-between;align-items:center}.cal-top h2{margin:0;font-size:19px;text-transform:none;letter-spacing:0;color:var(--fg)}
+.cal-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cal-bar b{font-size:16px;min-width:140px;text-align:center}
+.cal-nav{font:600 18px var(--sans);width:34px;height:32px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);cursor:pointer}
+.cal-bar select{margin:0 0 0 auto}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.cal-h{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center}
+.cal-c{border:1px solid var(--line);border-radius:4px;padding:4px 3px;min-height:74px;display:flex;flex-direction:column;gap:2px;background:var(--bg);cursor:pointer;text-align:left;font:inherit;color:var(--fg);min-width:0}
+.cal-c:hover{border-color:var(--pin)}.cal-c.today{border:2px solid var(--pin)}.cal-c.sel{outline:2px solid #d6336c;outline-offset:1px}.cal-c.empty{visibility:hidden}
+.cal-c .top{display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:12px}
+.cal-c .tt{font:10px/1.25 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-c .tt.big{color:var(--fg);font-weight:600}
+.cal-c .ph{font-size:9px;color:var(--pin);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-day{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px}
+.cal-day h3{margin:0;font-size:15px}.cal-day .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;align-items:center}
+.cal-day .ev{font:12px var(--mono);font-variant-numeric:tabular-nums;display:flex;gap:12px;flex-wrap:wrap}
+.cal-day .tc svg{width:100%;height:110px;display:block}
+@media (max-width:520px){.cal-c{min-height:62px}.cal-c .tt{font-size:9px}.cal-c .ph{display:none}}
+details.pane{border-top:1px solid var(--line);padding-top:10px}
+details.pane>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+details.pane>summary::-webkit-details-marker{display:none}
+details.pane>summary h2{margin:0}
+details.pane>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-right:4px;transition:transform .15s}
+details.pane[open]>summary::after{transform:rotate(-135deg)}
+details.pane[open]>summary{margin-bottom:8px}
+details.pane .file{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.lyr small{display:none}
+.vhfbtn{position:absolute;left:10px;top:84px;z-index:640;font:700 12px var(--sans);letter-spacing:.06em;padding:6px 10px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--pin);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.vhfbtn[aria-expanded="true"]{background:var(--pin);color:#fff;border-color:var(--pin)}
+.locbtn{top:122px}
+@media (max-width:760px){.locbtn{top:auto}.vhfpop{top:120px;max-height:60vh}}
+.vhfpop{position:absolute;left:10px;top:120px;z-index:700;width:min(320px,calc(100% - 20px));max-height:calc(100% - 140px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.vhfpop-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .sos-card.pan{border-top-color:#e8890c}
 .sos-tabs .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sos-tabs .tabs button{font:700 14px var(--sans);padding:10px 6px;border:2px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer;line-height:1.25}
@@ -161,28 +196,7 @@ a{color:var(--pin)}
 </head>
 <body>
 <div class="app">
-  <div class="mapwrap"><div id="map"></div><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind · knots</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar" hidden><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="locbtn" id="locbtn" aria-pressed="false">My location</button><div class="readout" id="readout">Tap the water for wind and waves at that spot</div></div>
-  <aside>
-    <div>
-      <div class="acct" id="acct" hidden><button type="button" class="gbtn" id="gsign">Sign in with Google</button><span class="acct-who" id="acct-who"></span><button type="button" class="linkbtn" id="gout" hidden>Sign out</button></div>
-      <h1>Strait of Georgia Marine Map</h1>
-      <p class="sub">Sand Heads to Gambier Island · Baynes Sound to Reed Point</p>
-    </div>
-
-    <section>
-      <h2>Base map</h2>
-      <div class="seg" id="basemaps"></div>
-      <p class="note" style="margin-top:6px">Depth contours use Canadian Hydrographic Service survey depths, coloured in bands from red (shallow) to blue (deep). Satellite zooms to about 100 ft on the scale bar.</p>
-    </section>
-
-    <section>
-      <h2>Overlays</h2>
-      <div id="overlays"></div>
-    </section>
-
-    <section>
-      <h2>VHF channels</h2>
-      <div class="rows vhf">
+  <div class="mapwrap"><div id="map"></div><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind · knots</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar" hidden><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div></div><div class="cal" id="cal" hidden role="dialog" aria-modal="true" aria-labelledby="cal-title"><div class="cal-card"><div class="cal-top"><h2 id="cal-title">Tide &amp; moon calendar</h2><button type="button" class="sos-x" id="cal-close">Close</button></div><div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-month"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><select id="cal-station" class="dlsel" aria-label="Tide station"></select></div><div class="cal-grid" id="cal-grid"></div><div class="cal-day" id="cal-day"></div><p class="note">Tide heights in metres above chart datum (lowest normal tide), from the Canadian Hydrographic Service. Bigger tide ranges (bold) mean stronger currents. Moon phases are calculated and accurate to within about half a day.</p></div></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="vhfbtn" id="vhfbtn" aria-expanded="false" aria-controls="vhfpop">VHF</button><div class="vhfpop" id="vhfpop" hidden><div class="vhfpop-top"><b>VHF channels</b><button type="button" class="linkbtn" id="vhfclose">Close</button></div><div class="rows vhf">
         <div class="vr em"><b>16</b><span>Distress, safety and calling · <i>*16</i> on a cell phone</span></div>
         <div class="vr"><b>83A</b><span>Coast Guard working channel</span></div>
         <div class="vr"><b>12</b><span>Vessel Traffic: Vancouver Harbour, English Bay, Howe Sound</span></div>
@@ -194,9 +208,18 @@ a{color:var(--pin)}
         <div class="vr wx"><b>WX1</b><span>Weather broadcast · Texada Island transmitter</span></div>
         <div class="vr wx"><b>21B</b><span>Weather broadcast · Mount Parke, Mayne Island</span></div>
       </div>
-      <p class="note" style="margin-top:6px">Check the Coast Guard's Radio Aids to Marine Navigation before relying on these.</p>
-    </section>
+      <p class="note" style="margin-top:6px">Check the Coast Guard's Radio Aids to Marine Navigation before relying on these.</p></div><button type="button" class="locbtn" id="locbtn" aria-pressed="false">My location</button><div class="readout" id="readout">Tap the water for wind and waves at that spot</div></div>
+  <aside>
+    <div>
+      <div class="acct" id="acct" hidden><button type="button" class="gbtn" id="gsign">Sign in with Google</button><span class="acct-who" id="acct-who"></span><button type="button" class="linkbtn" id="gout" hidden>Sign out</button></div>
+      <h1>Strait of Georgia Marine Map</h1>
+      <p class="sub">Sand Heads to Gambier Island · Baynes Sound to Reed Point</p>
+    </div>
 
+    <section>
+      <h2>Base map</h2>
+      <div class="seg" id="basemaps"></div>
+    </section>
 
     <section class="time">
       <h2>Forecast time (wind and waves)</h2>
@@ -213,31 +236,35 @@ a{color:var(--pin)}
       </div>
     </section>
 
-    <section>
-      <h2>Marine forecast · Environment Canada</h2>
-      <div id="marine"><p class="note">Loading the official marine forecast…</p></div>
-    </section>
+    <details class="pane" data-pane="layers" open>
+      <summary><h2>Layers</h2></summary>
+      <div id="overlays"></div>
+    </details>
 
-    <section>
-      <h2>Tides · next 48 hours</h2>
-      <p class="note">Numbers = tide height in metres at each high and low · shaded = night · orange dashes = sunrise and sunset · grey line = midnight · red = now</p>
+    <details class="pane" data-pane="tides" open>
+      <summary><h2>Tides · next 48 h</h2></summary>
+      <button type="button" class="calbtn" id="calbtn">Tide &amp; moon calendar</button>
       <div id="tides"><p class="note">Loading tide predictions…</p></div>
-    </section>
+      <p class="note">Heights in metres · shaded = night · orange = sunrise and sunset · red = now</p>
+    </details>
 
-    <section class="file">
-      <h2>Add DFO zones from a file</h2>
-      <label for="dfofile" class="note">Load Rockfish Conservation Areas or any closure boundary saved as GeoJSON.</label>
-      <input type="file" id="dfofile" accept=".geojson,.json">
-      <p class="note" id="dfostatus"></p>
-    </section>
+    <details class="pane" data-pane="marine">
+      <summary><h2>Marine forecast</h2></summary>
+      <div id="marine"><p class="note">Loading the official marine forecast…</p></div>
+    </details>
 
-    <section>
-      <h2>Check before you go</h2>
-      <p class="note"><a href="https://www-ops2.pac.dfo-mpo.gc.ca/fns-sap/index-eng.cfm" target="_blank" rel="noopener">DFO fishery notices</a> for openings and closures ·
-      <a href="https://www.pac.dfo-mpo.gc.ca/fm-gp/maps-cartes/rca-acs/index-eng.html" target="_blank" rel="noopener">Rockfish Conservation Area maps</a> ·
-      <a href="https://weather.gc.ca/marine/region_e.html?mapID=02" target="_blank" rel="noopener">Environment Canada marine forecast</a></p>
-      <p class="note" style="margin-top:8px">Planning aid only. Not for navigation; use CHS charts.</p>
-    </section>
+    <details class="pane" data-pane="more">
+      <summary><h2>More</h2></summary>
+      <div class="file">
+        <label for="dfofile" class="note">Add DFO zones (Rockfish Conservation Areas or any closure) from a GeoJSON file:</label>
+        <input type="file" id="dfofile" accept=".geojson,.json">
+        <p class="note" id="dfostatus"></p>
+      </div>
+      <p class="note"><a href="https://www-ops2.pac.dfo-mpo.gc.ca/fns-sap/index-eng.cfm" target="_blank" rel="noopener">DFO fishery notices</a> ·
+      <a href="https://www.pac.dfo-mpo.gc.ca/fm-gp/maps-cartes/rca-acs/index-eng.html" target="_blank" rel="noopener">Rockfish Conservation Areas</a> ·
+      <a href="https://weather.gc.ca/marine/region_e.html?mapID=02" target="_blank" rel="noopener">EC marine forecast</a></p>
+      <p class="note">Planning aid only. Not for navigation; use CHS charts.</p>
+    </details>
   </aside>
 </div>
 
@@ -328,6 +355,7 @@ Object.keys(bases).forEach((k,i) => {
 const ovl = document.getElementById('overlays');
 function addOverlay(id, title, sub, layer, on=true){
   const row = document.createElement('label'); row.className='lyr';
+  row.title = sub;
   row.innerHTML = `<input type="checkbox" id="o-${id}" ${on?'checked':''}><span>${title}<small>${sub}</small></span><span class="st wait" id="s-${id}">loading</span>`;
   ovl.appendChild(row);
   if (on) layer.addTo(map);
@@ -1161,8 +1189,150 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.get
 }));
 map.on('locationerror', () => { if (!lastKnown) document.getElementById('sos-coord').textContent = 'No GPS position. Allow location access, or read your position from your chartplotter.'; });
 
+
+// ---------- Tide & moon calendar ----------
+const SYNODIC = 29.530588853, NEW_REF = Date.UTC(2000, 0, 6, 18, 14);
+const moonPhase = t => { const p = ((t - NEW_REF) / 864e5 / SYNODIC) % 1; return p < 0 ? p + 1 : p; };
+const moonIllum = p => (1 - Math.cos(2 * Math.PI * p)) / 2;
+function moonName(p){
+  const n = [[0.0339,'New moon'],[0.2161,'Waxing crescent'],[0.2839,'First quarter'],[0.4661,'Waxing gibbous'],[0.5339,'Full moon'],[0.7161,'Waning gibbous'],[0.7839,'Last quarter'],[0.9661,'Waning crescent'],[1.01,'New moon']];
+  return n.find(([lim]) => p < lim)[1];
+}
+function moonSVG(p, size){
+  // Lit part seen from the northern hemisphere: waxing lit on the right
+  const r = 10, c = Math.cos(2 * Math.PI * p), rx = Math.abs(c) * r;
+  const waxing = p < 0.5, sweepOuter = waxing ? 1 : 0;
+  const sweepInner = (waxing ? (c > 0 ? 0 : 1) : (c > 0 ? 1 : 0));
+  const lit = `M12 2 A${r} ${r} 0 0 ${sweepOuter} 12 22 A${rx.toFixed(2)} ${r} 0 0 ${sweepInner} 12 2Z`;
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#2b3440"/><path d="${lit}" fill="#f4e7b4"/><circle cx="12" cy="12" r="10" fill="none" stroke="var(--line)"/></svg>`;
+}
+// Days on which a main phase falls (closest local day to the exact moment)
+function keyPhaseDays(y, m){
+  const out = {};
+  const start = Date.UTC(y, m, 1) - 2*864e5, end = Date.UTC(y, m + 1, 1) + 2*864e5;
+  let k = Math.floor((start - NEW_REF) / 864e5 / SYNODIC);
+  for (; ; k++){
+    for (const [frac, name] of [[0,'New moon'],[0.25,'First quarter'],[0.5,'Full moon'],[0.75,'Last quarter']]){
+      const t = NEW_REF + (k + frac) * SYNODIC * 864e5;
+      if (t > end) return out;
+      if (t >= start) out[localKey(new Date(t))] = name;
+    }
+  }
+}
+const localKey = d => d.toLocaleDateString('en-CA', {timeZone:CONFIG.tz});   // YYYY-MM-DD
+const stationIds = {};   // code -> {id, lat, lon}
+async function stationInfo(code){
+  if (stationIds[code]) return stationIds[code];
+  const st = (await (await fetch(`${CONFIG.iwls}/stations?code=${code}`)).json())[0];
+  return stationIds[code] = {id: st.id, lat: st.latitude, lon: st.longitude, name: st.officialName};
+}
+const calState = {y: 0, m: 0, sel: null, cache: {}};
+const calStation = document.getElementById('cal-station');
+CONFIG.tideStations.forEach(s => calStation.add(new Option(`Tides: ${s.name}`, s.code)));
+try { const v = localStorage.getItem('cal-station'); if (v) calStation.value = v; } catch(e){}
+calStation.addEventListener('change', () => { try { localStorage.setItem('cal-station', calStation.value); } catch(e){} renderCal(); });
+
+async function monthTides(code, y, m){
+  const key = `${code}-${y}-${m}`;
+  if (calState.cache[key]) return calState.cache[key];
+  const st = await stationInfo(code);
+  const from = new Date(Date.UTC(y, m, 1) - 864e5), to = new Date(Date.UTC(y, m + 1, 1) + 864e5);
+  const iso = d => d.toISOString().replace(/\.\d{3}Z$/,'Z');
+  const raw = await (await fetch(`${CONFIG.iwls}/stations/${st.id}/data?time-series-code=wlp-hilo&from=${iso(from)}&to=${iso(to)}`)).json();
+  const ev = raw.map((p, i, a) => { const prev = a[i-1]?.value, next = a[i+1]?.value; return {t: new Date(p.eventDate), v: p.value, high: prev != null ? p.value > prev : p.value > next}; });
+  const byDay = {};
+  ev.forEach(e => (byDay[localKey(e.t)] ||= []).push(e));
+  return calState.cache[key] = {st, byDay};
+}
+async function renderCal(){
+  const {y, m} = calState, grid = document.getElementById('cal-grid');
+  const first = new Date(Date.UTC(y, m, 1, 20));
+  document.getElementById('cal-month').textContent = first.toLocaleDateString('en-CA', {month:'long', year:'numeric', timeZone:'UTC'});
+  const WD = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const lead = (first.getUTCDay() + 6) % 7, days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const phases = keyPhaseDays(y, m), todayKey = localKey(new Date());
+  let tides = null;
+  try { tides = await monthTides(calStation.value, y, m); } catch(e){}
+  if (calState.y !== y || calState.m !== m) return;   // user moved on
+  // range per day, to flag the biggest tides of the month
+  const ranges = [];
+  let html = WD.map(d => `<div class="cal-h">${d}</div>`).join('') + '<div class="cal-c empty"></div>'.repeat(lead);
+  for (let d = 1; d <= days; d++){
+    const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const ev = tides?.byDay[key] || [];
+    const hi = ev.filter(e => e.high).map(e => e.v), lo = ev.filter(e => !e.high).map(e => e.v);
+    const range = hi.length && lo.length ? Math.max(...hi) - Math.min(...lo) : null;
+    if (range != null) ranges.push(range);
+    const p = moonPhase(Date.UTC(y, m, d, 20));
+    html += `<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
+      `<span class="top">${d}${moonSVG(p, 16)}</span>` +
+      (phases[key] ? `<span class="ph">${phases[key]}</span>` : '') +
+      (hi.length ? `<span class="tt">H ${Math.max(...hi).toFixed(1)}</span><span class="tt">L ${Math.min(...lo).toFixed(1)}</span>` : (tides ? '<span class="tt">–</span>' : '')) +
+      `</button>`;
+  }
+  grid.innerHTML = html;
+  // Bold the days with the biggest third of tide ranges (strongest currents)
+  const cut = ranges.slice().sort((a, b) => b - a)[Math.floor(ranges.length / 3)] ?? Infinity;
+  grid.querySelectorAll('.cal-c[data-range]').forEach(c => { if (c.dataset.range && +c.dataset.range >= cut) c.querySelectorAll('.tt').forEach(t => t.classList.add('big')); });
+  grid.querySelectorAll('.cal-c[data-key]').forEach(c => c.addEventListener('click', () => { calState.sel = c.dataset.key; grid.querySelectorAll('.cal-c').forEach(x => x.classList.toggle('sel', x === c)); renderDay(); }));
+  if (!tides) document.getElementById('cal-day').innerHTML = '<p class="note">Couldn\'t load tides for this month.</p>';
+  else if (calState.sel && calState.sel.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)) renderDay();
+}
+async function renderDay(){
+  const box = document.getElementById('cal-day'), key = calState.sel; if (!key) return;
+  const [Y, M, D] = key.split('-').map(Number);
+  const noon = new Date(Date.UTC(Y, M - 1, D, 20));
+  const p = moonPhase(noon.getTime());
+  let st; try { st = await stationInfo(calStation.value); } catch(e){ box.innerHTML = '<p class="note">Couldn\'t load the tide station.</p>'; return; }
+  const sun = sunTimes(noon, st.lat, st.lon);
+  const fmtT = d => fmt(d, {hour:'numeric', minute:'2-digit'});
+  const tides = calState.cache[`${calStation.value}-${Y}-${M-1}`];
+  const ev = tides?.byDay[key] || [];
+  box.innerHTML = `<h3>${noon.toLocaleDateString('en-CA', {weekday:'long', month:'long', day:'numeric', timeZone:'UTC'})} · ${esc2(st.name || '')}</h3>` +
+    `<div class="meta">${moonSVG(p, 28)}<span><b>${moonName(p)}</b> · ${Math.round(moonIllum(p) * 100)}% lit</span><span>Sunrise ${fmtT(sun.rise)} · Sunset ${fmtT(sun.set)}</span></div>` +
+    `<div class="ev">${ev.map(e => `<span>${e.high ? 'High' : 'Low'} ${fmtT(e.t)} <b>${e.v.toFixed(1)} m</b></span>`).join('') || 'No tide data'}</div>` +
+    `<div id="cal-curve"><p class="note">Loading tide curve…</p></div>`;
+  // Local midnight to midnight for that day
+  const hr = new Intl.DateTimeFormat('en-CA', {timeZone:CONFIG.tz, hour:'numeric', hourCycle:'h23'});
+  let t0 = Date.UTC(Y, M - 1, D, 4); while (localKey(new Date(t0)) !== key || +hr.format(new Date(t0)) !== 0) t0 += 3600e3;
+  const iso = d => new Date(d).toISOString().replace(/\.\d{3}Z$/,'Z');
+  try {
+    const curve = await (await fetch(`${CONFIG.iwls}/stations/${st.id}/data?time-series-code=wlp&from=${iso(t0)}&to=${iso(t0 + 864e5)}&resolution=FIFTEEN_MINUTES`)).json();
+    if (calState.sel !== key) return;
+    const el = document.getElementById('cal-curve');
+    el.innerHTML = sparkline(curve, st.lat, st.lon, ev);
+    // the red "now" line on the left only makes sense for today
+    if (key !== localKey(new Date())) el.querySelector('svg line[stroke="var(--accent)"]')?.remove();
+  } catch(e){ document.getElementById('cal-curve').innerHTML = '<p class="note">Couldn\'t load the tide curve.</p>'; }
+}
+function openCal(){
+  const now = new Date(), k = localKey(now).split('-').map(Number);
+  if (!calState.y){ calState.y = k[0]; calState.m = k[1] - 1; calState.sel = localKey(now); }
+  document.getElementById('cal').hidden = false;
+  renderCal();
+}
+document.getElementById('calbtn').addEventListener('click', openCal);
+document.getElementById('cal-close').addEventListener('click', () => document.getElementById('cal').hidden = true);
+document.getElementById('cal-prev').addEventListener('click', () => { if (--calState.m < 0){ calState.m = 11; calState.y--; } renderCal(); });
+document.getElementById('cal-next').addEventListener('click', () => { if (++calState.m > 11){ calState.m = 0; calState.y++; } renderCal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('cal').hidden = true; });
+
+
+// ---------- VHF button and collapsible panel sections ----------
+(() => {
+  const btn = document.getElementById('vhfbtn'), pop = document.getElementById('vhfpop');
+  const set = open => { pop.hidden = !open; btn.setAttribute('aria-expanded', open); };
+  btn.addEventListener('click', () => set(pop.hidden));
+  document.getElementById('vhfclose').addEventListener('click', () => set(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') set(false); });
+  document.querySelectorAll('details.pane').forEach(d => {
+    try { const v = localStorage.getItem('pane-' + d.dataset.pane); if (v != null) d.open = v === '1'; } catch(e){}
+    d.addEventListener('toggle', () => { try { localStorage.setItem('pane-' + d.dataset.pane, d.open ? '1' : '0'); } catch(e){} });
+  });
+})();
+
 // ---------- Google sign-in: save settings to your account ----------
-const SYNC_KEYS = ['sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta','sos-what-MAYDAY','sos-what-PAN','dlspot'];
+const SYNC_KEYS = ['cal-station','sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta','sos-what-MAYDAY','sos-what-PAN','dlspot'];
 (function setupAccount(){
   const box = document.getElementById('acct');
   if (!CONFIG.firebase || typeof firebase === 'undefined' || location.protocol === 'file:') return;   // only on the hosted site
