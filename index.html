@@ -174,6 +174,14 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .wxdays{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(30px + env(safe-area-inset-bottom,0px));z-index:620;display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px;box-shadow:0 2px 6px rgba(0,0,0,.25);max-width:calc(100% - 20px);overflow-x:auto}
 .wxdays button{font:600 12px var(--sans);padding:5px 9px;border:1px solid transparent;border-radius:4px;background:none;color:var(--fg);cursor:pointer;white-space:nowrap}
 .wxdays button[aria-pressed="true"]{background:var(--pin);color:#fff}
+.wxdays{align-items:stretch}
+.wxdays .wxd{display:flex;flex-direction:column;gap:3px;min-width:44px}
+.wxdays .wxd .dn{padding:3px 6px}
+.wxdays .seg4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:0 2px 2px}
+.wxdays .seg4 button{padding:0;height:10px;min-width:0;border-radius:2px;background:var(--line);border:0}
+.wxdays .seg4 button[aria-pressed="true"]{background:var(--pin)}
+.wxdays .seg4 button:disabled{opacity:.25;cursor:default}
+.wxdays .play{align-self:center;font-size:13px;padding:6px 10px;border:1px solid var(--line)}
 .wxm{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 6px 2px 2px;display:flex;align-items:center;gap:3px;box-shadow:0 1px 4px rgba(0,0,0,.3);white-space:nowrap;font:600 12px var(--sans);color:var(--fg)}
 .wxm img{width:30px;height:26px;object-fit:contain}
 .wxm .lo{color:var(--muted);font-weight:400}.wxm .pop{color:var(--pin);font-size:10px;margin-left:2px}
@@ -1822,24 +1830,49 @@ function wxPeriods(props){
 }
 const tempOf = (p, cls) => p?.temperatures?.temperature?.find(t => t.class?.en === cls)?.value?.en;
 const popOf = p => p?.abbreviatedForecast?.pop?.value?.en ?? p?.abbreviatedForecast?.pop?.en;
-// Picking a day also moves the wind and wave layers: now for today, 2 pm local for later days
-function wxDayToTime(dayName, isFirst){
-  let hrs = 0;
-  if (!isFirst){
-    const now = Date.now();
-    for (let off = 1; off < 9; off++){
-      const d = new Date(now + off*864e5);
-      if (d.toLocaleDateString('en-CA', {timeZone:CONFIG.tz, weekday:'long'}) === dayName){
-        const t = localMidnight(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 20))) + 14*3600e3;
-        const base = new Date(); base.setUTCMinutes(0,0,0);
-        hrs = Math.round((t - base) / 3600e3);
-        break;
-      }
+// Day picker on the map: each day has four 6-hour blocks (00–06, 06–12, 12–18, 18–24) that move the
+// wind and wave layers to the middle of that block; ▶ plays through them. "Now" = no block chosen.
+let wxSel = null, wxPlay = null;
+function wxDayKeys(dayNames){
+  const keys = [], now = Date.now();
+  let off = 0;
+  for (const d of dayNames){
+    for (; off < 10; off++){
+      const dt = new Date(now + off*864e5);
+      if (dt.toLocaleDateString('en-CA', {timeZone:CONFIG.tz, weekday:'long'}) === d){ keys.push(localKey(dt)); break; }
     }
+    if (keys.length < dayNames.indexOf(d) + 1) keys.push(null);
   }
+  return keys;
+}
+function setWxTime(t){   // t = ms, or null for now
+  const base = new Date(); base.setUTCMinutes(0,0,0);
+  const hrs = t == null ? 0 : Math.round((t - base) / 3600e3);
   if (hrs > +fhour.max){ fhour.max = 168; fhour.step = 3; }
   fhour.value = Math.max(0, Math.min(+fhour.max, Math.round(hrs / +fhour.step) * +fhour.step));
   applyTime();
+}
+function wxBlocks(){   // every selectable block, in order
+  const dayNames = wxData[0]?.days.map(x => x.day) || [], keys = wxDayKeys(dayNames), out = [];
+  keys.forEach((k, i) => { if (k) for (let b = 0; b < 4; b++) if (blockStart(k, b) + 6*3600e3 > Date.now()) out.push({i, b, k}); });
+  return out;
+}
+function selectBlock(i, b){
+  const dayNames = wxData[0].days.map(x => x.day), k = wxDayKeys(dayNames)[i];
+  wxDay = dayNames[i];
+  if (b == null || !k){ wxSel = null; setWxTime(null); }
+  else { wxSel = {i, b}; setWxTime(Math.max(Date.now(), blockStart(k, b) + 3*3600e3)); }
+  drawWx();
+}
+function togglePlay(){
+  if (wxPlay){ clearInterval(wxPlay); wxPlay = null; drawWx(); return; }
+  const step = () => {
+    const all = wxBlocks(); if (!all.length) return;
+    const cur = wxSel ? all.findIndex(x => x.i === wxSel.i && x.b === wxSel.b) : -1;
+    const nx = all[(cur + 1) % all.length];
+    selectBlock(nx.i, nx.b);
+  };
+  wxPlay = setInterval(step, 1600); step();
 }
 function drawWx(){
   wxLayer.clearLayers();
@@ -1848,9 +1881,14 @@ function drawWx(){
   if (bar.hidden) return;
   const dayNames = wxData[0].days.map(x => x.day);
   if (!dayNames.includes(wxDay)) wxDay = dayNames[0];
-  bar.innerHTML = dayNames.map((d, i) => `<button type="button" aria-pressed="${d === wxDay}" data-d="${esc2(d)}">${i === 0 ? (wxData[0].days[0].d ? 'Today' : 'Tonight') : esc2(d.slice(0,3))}</button>`).join('');
-  bar.querySelectorAll('button').forEach((b, i) => { b.title = i === 0 ? 'Weather today · wind and waves now' : `Weather ${b.dataset.d} · wind and waves at 2 pm`;
-    b.addEventListener('click', () => { wxDay = b.dataset.d; drawWx(); wxDayToTime(b.dataset.d, i === 0); }); });
+  const keys = wxDayKeys(dayNames), nowMs = Date.now(), BN = ['00–06','06–12','12–18','18–24'];
+  bar.innerHTML = `<button type="button" class="play" aria-label="${wxPlay ? 'Pause' : 'Play'}" title="${wxPlay ? 'Pause' : 'Play through the week, 6 hours at a time'}">${wxPlay ? '❚❚' : '▶'}</button>` +
+    dayNames.map((d, i) => `<div class="wxd"><button type="button" class="dn" data-i="${i}" aria-pressed="${d === wxDay}" title="${i === 0 ? 'Today: weather, and wind and waves now' : esc2(d) + ': weather, and wind and waves at midday'}">${i === 0 ? (wxData[0].days[0].d ? 'Today' : 'Tonight') : esc2(d.slice(0,3))}</button>` +
+      `<span class="seg4">${[0,1,2,3].map(b => { const gone = !keys[i] || blockStart(keys[i], b) + 6*3600e3 <= nowMs;
+        return `<button type="button" data-i="${i}" data-b="${b}" ${gone ? 'disabled' : ''} aria-pressed="${!!(wxSel && wxSel.i === i && wxSel.b === b)}" aria-label="${esc2(d)} ${BN[b]}" title="${esc2(d)} ${BN[b]}: wind and waves"></button>`; }).join('')}</span></div>`).join('');
+  bar.querySelector('.play').addEventListener('click', togglePlay);
+  bar.querySelectorAll('.dn').forEach(b => b.addEventListener('click', () => { if (wxPlay){ clearInterval(wxPlay); wxPlay = null; } const i = +b.dataset.i; selectBlock(i, i === 0 ? null : 2); }));
+  bar.querySelectorAll('.seg4 button').forEach(b => b.addEventListener('click', () => { if (wxPlay){ clearInterval(wxPlay); wxPlay = null; } selectBlock(+b.dataset.i, +b.dataset.b); }));
   for (const t of wxData){
     const e = t.days.find(x => x.day === wxDay); if (!e) continue;
     const main = e.d || e.n, hi = tempOf(e.d, 'high'), lo = tempOf(e.n, 'low'), pop = popOf(e.d) ?? popOf(e.n);
