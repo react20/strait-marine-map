@@ -1802,10 +1802,10 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.get
 })();
 
 
-// ---------- Today's weather forecast on the map (Environment Canada city forecasts) ----------
+// ---------- 7-day weather forecast on the map (Environment Canada city forecasts) ----------
 const WX_TOWNS = /^(Nanaimo|Gibsons|Sechelt|Qualicum Beach|West Vancouver|Richmond|Vancouver)$/;
 const wxLayer = L.layerGroup();
-const setWxStatus = addOverlay('wx7', 'Weather forecast · today', 'Environment Canada town forecasts: temperature and chance of rain. Tap a town for details; the calendar has 14 days', wxLayer, true);
+const setWxStatus = addOverlay('wx7', 'Weather forecast · 7 days', 'Environment Canada town forecasts: temperature and chance of rain. Pick the day with the buttons on the map; tap a town for details', wxLayer, true);
 let wxData = [], wxDay = null;
 function wxPeriods(props){
   // Group the forecast periods into days: {day:'Wednesday', d:{...}, n:{...}}
@@ -1824,9 +1824,12 @@ const popOf = p => p?.abbreviatedForecast?.pop?.value?.en ?? p?.abbreviatedForec
 function drawWx(){
   wxLayer.clearLayers();
   const bar = document.getElementById('wxdays');
-  bar.hidden = true;   // day picker removed from the map: town labels always show today (the calendar has the week)
-  if (!map.hasLayer(wxLayer) || !wxData.length) return;
-  wxDay = wxData[0].days[0].day;
+  bar.hidden = !map.hasLayer(wxLayer) || !wxData.length;
+  if (bar.hidden) return;
+  const dayNames = wxData[0].days.map(x => x.day);
+  if (!dayNames.includes(wxDay)) wxDay = dayNames[0];
+  bar.innerHTML = dayNames.map((d, i) => `<button type="button" aria-pressed="${d === wxDay}" data-d="${esc2(d)}">${i === 0 ? (wxData[0].days[0].d ? 'Today' : 'Tonight') : esc2(d.slice(0,3))}</button>`).join('');
+  bar.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { wxDay = b.dataset.d; drawWx(); }));
   for (const t of wxData){
     const e = t.days.find(x => x.day === wxDay); if (!e) continue;
     const main = e.d || e.n, hi = tempOf(e.d, 'high'), lo = tempOf(e.n, 'low'), pop = popOf(e.d) ?? popOf(e.n);
