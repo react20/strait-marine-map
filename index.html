@@ -169,6 +169,9 @@ details.pane .file{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
 @media (max-width:520px){.cal-c{min-height:84px}.cal-c .tt{font-size:8.5px;letter-spacing:-.02em}}
 .cal-c .tt i{font-style:normal;margin-right:2px}.cal-c .tt em{font-style:normal}
 @media (max-width:640px){.cal-c{padding:3px 2px}.cal-c .tt{font-size:9px;letter-spacing:-.03em;text-overflow:clip}.cal-c .tt i{display:none}}
+details.pane.time[open]{display:flex;flex-direction:column;gap:6px}
+details.pane.time[open]>summary{margin-bottom:2px}
+details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px}
 .sos-card.pan{border-top-color:#e8890c}
 .sos-tabs .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sos-tabs .tabs button{font:700 14px var(--sans);padding:10px 6px;border:2px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer;line-height:1.25}
@@ -227,8 +230,8 @@ a{color:var(--pin)}
       <div class="seg" id="basemaps"></div>
     </section>
 
-    <section class="time">
-      <h2>Forecast time (wind and waves)</h2>
+    <details class="pane time" data-pane="time2">
+      <summary><h2>Forecast time · wind and waves</h2></summary>
       <div class="seg" id="ranges"><button type="button" data-h="24" aria-pressed="true">24 h</button><button type="button" data-h="168" aria-pressed="false">7 days</button><button type="button" data-h="336" aria-pressed="false">14 days</button></div>
       <div class="seg steps" id="steps"><button type="button" data-step="-24" aria-label="Back 1 day">&laquo; −1 d</button><button type="button" data-step="-1" aria-label="Back 1 step">&lsaquo; −1 h</button><button type="button" data-step="0" aria-label="Back to now">Now</button><button type="button" data-step="1" aria-label="Forward 1 step">+1 h &rsaquo;</button><button type="button" data-step="24" aria-label="Forward 1 day">+1 d &raquo;</button></div>
       <input type="range" id="fhour" min="0" max="24" step="1" value="0" aria-label="Forecast hours from now">
@@ -240,16 +243,15 @@ a{color:var(--pin)}
         <select id="dlspot" class="dlsel"></select>
         <div id="dltable"><p class="note">Loading…</p></div>
       </div>
-    </section>
+    </details>
 
     <details class="pane" data-pane="layers" open>
       <summary><h2>Layers</h2></summary>
       <div id="overlays"></div>
     </details>
 
-    <details class="pane" data-pane="tides" open>
-      <summary><h2>Tides · next 48 h</h2></summary>
-      <button type="button" class="calbtn" id="calbtn">Tide &amp; moon calendar</button>
+    <details class="pane" data-pane="tides2">
+      <summary><h2>Tides · next 48 h</h2><button type="button" class="calbtn" id="calbtn">Calendar</button></summary>
       <div id="tides"><p class="note">Loading tide predictions…</p></div>
       <p class="note">Heights in metres · shaded = night · orange = sunrise and sunset · red = now</p>
     </details>
@@ -1329,7 +1331,7 @@ function openCal(){
   document.getElementById('cal').hidden = false;
   renderCal();
 }
-document.getElementById('calbtn').addEventListener('click', openCal);
+document.getElementById('calbtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openCal(); });
 document.getElementById('cal-close').addEventListener('click', () => document.getElementById('cal').hidden = true);
 document.getElementById('cal-prev').addEventListener('click', () => { if (--calState.m < 0){ calState.m = 11; calState.y--; } renderCal(); });
 document.getElementById('cal-next').addEventListener('click', () => { if (++calState.m > 11){ calState.m = 0; calState.y++; } renderCal(); });
