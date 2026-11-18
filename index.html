@@ -848,7 +848,8 @@ loadTides();
 // ---------- Live ships (AIS) ----------
 const dm = (v, pos, neg) => { const a = Math.abs(v), d = Math.floor(a); return `${d}° ${((a - d) * 60).toFixed(3)}′ ${v >= 0 ? pos : neg}`; };
 const govLayer = L.layerGroup(), otherLayer = L.layerGroup();
-const setGovStatus = addOverlay('gov', 'Coast Guard & DFO ships', 'Live AIS · needs the AIS helper running', govLayer);
+const IS_PHONE_UA = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+const setGovStatus = addOverlay('gov', 'Coast Guard & DFO ships', IS_PHONE_UA ? 'Live AIS · works on the computer running the AIS helper, not on phones yet' : 'Live AIS · needs the AIS helper running', govLayer);
 const setOtherStatus = addOverlay('ships', 'Other ships', 'Live AIS, all other vessels', otherLayer, false);
 const isGov = v => CONFIG.govNames.test(v.name || '') || CONFIG.govMmsi.includes(String(v.mmsi));
 function boatIcon(v, gov){
@@ -859,6 +860,7 @@ function boatIcon(v, gov){
     html:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="transform:rotate(${moving ? rot : 0}deg)"><g fill="${fill}" stroke="#fff" stroke-width="1.5">${shape}</g></svg>`});
 }
 const esc2 = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const IS_PHONE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 async function loadShips(){
   if (!map.hasLayer(govLayer) && !map.hasLayer(otherLayer)) return;
   try {
@@ -879,10 +881,12 @@ async function loadShips(){
     setGovStatus(d.connected ? 'ok' : 'warn', `${gov} ${live}`);
     setOtherStatus(d.connected ? 'ok' : 'warn', `${other} ${live}`);
   } catch(e){
-    setGovStatus('bad', 'helper off'); setOtherStatus('bad', 'helper off');
+    // The helper runs on a computer; a phone can't reach it, so say so plainly
+    const msg = IS_PHONE ? 'computer only' : 'helper off';
+    setGovStatus(IS_PHONE ? 'warn' : 'bad', msg); setOtherStatus(IS_PHONE ? 'warn' : 'bad', msg);
   }
 }
-loadShips(); setInterval(loadShips, 15000);
+loadShips(); setInterval(() => { if (!IS_PHONE || document.visibilityState === 'visible') loadShips(); }, IS_PHONE ? 60000 : 15000);
 govLayer.on('add', loadShips); otherLayer.on('add', loadShips);
 
 // ---------- Daylight hours table (24 h view) ----------
