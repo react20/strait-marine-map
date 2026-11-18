@@ -1487,8 +1487,7 @@ async function renderCal(){
     if (range != null) ranges.push(range);
     const p = moonPhase(Date.UTC(y, m, d, 20));
     html += `<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
-      `<span class="top">${d}${moonSVG(p, 16)}</span>` +
-      (phases[key] ? `<span class="ph">${phases[key]}</span>` : '') +
+      `<span class="top" title="${phases[key] || moonName(p)}">${d}${moonSVG(p, 16)}</span>` +
       (tides ? `<span class="tide-grp"><span class="mini">${miniTide(localMidnight(new Date(Date.UTC(y, m, d, 20))), tides.ev, mLo, mHi)}${blocksHTML(key, wxd)}</span><span class="wv4">${[0,1,2,3].map(b => `<span class="wv" data-key="${key}" data-b="${b}"></span>`).join('')}</span>` : '') +
       (ev.length ? ev.map(e => `<span class="tt ${e.high ? 'hi' : 'lo'}" title="${e.high ? 'High' : 'Low'} ${fmt(e.t,{hour:'numeric',minute:'2-digit'})}, ${e.v.toFixed(1)} m"><i>${e.high ? '▲' : '▼'}</i>${shortTime(e.t)} <em>${e.v.toFixed(1)}</em></span>`).join('') : (tides ? '<span class="tt">–</span>' : '')) + (tides ? '</span>' : '') +
       `</button>`;
