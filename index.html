@@ -222,6 +222,7 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .cal-c .wv.c{color:#2f9e44}.cal-c .wv.w{color:#f08c00}.cal-c .wv.x{color:#e03131}
 .cal-c .bk .noic{display:block;width:13px;height:12px}
 .cal-c .bk .wi{min-height:9px}
+.cal-c .past,.cal-c .past .wd{opacity:.5;filter:grayscale(1)}.cal-c .wd.so .n{font-style:italic}
 .cal-tide{font-size:13px;color:var(--muted);padding:6px 4px;white-space:nowrap}
 .cal-bar #cal-wx{margin-left:auto}
 .sos-card.pan{border-top-color:#e8890c}
@@ -257,7 +258,7 @@ a{color:var(--pin)}
 </head>
 <body>
 <div class="app">
-  <div class="mapwrap"><div id="map"></div><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind · knots</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar" hidden><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div></div><div class="cal" id="cal" hidden role="dialog" aria-modal="true" aria-labelledby="cal-title"><div class="cal-card"><div class="cal-top"><h2 id="cal-title">Tide &amp; moon calendar</h2><button type="button" class="sos-x" id="cal-close">Close</button></div><div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-month"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><select id="cal-station" class="dlsel" aria-label="Tide station" hidden></select><select id="cal-wx" class="dlsel" aria-label="Weather for"></select><span class="cal-tide" id="cal-tide"></span></div><div class="cal-grid" id="cal-grid"></div><div class="cal-day" id="cal-day"></div><div class="cal-ins" id="cal-ins"></div><p class="note">Tide heights in metres above chart datum (lowest normal tide), from the Canadian Hydrographic Service. ▲ high (blue) and ▼ low tide, with time (24-hour) and height in metres. Moon phases are calculated and accurate to within about half a day. Each day's small chart is the tide from midnight to midnight (same scale all month). Its colour shows how fast the tide is changing, a guide to current strength: <b style="color:#e03131">red</b> strong (over 0.6 m/h), <b style="color:#f08c00">orange</b> moderate, <b style="color:#2f9e44">green</b> weak, near slack water. Each day is split into four 6-hour blocks (00–06, 06–12, 12–18, 18–24): each block shows the wind (arrow and knots: green under 10, orange 10–20, red over 20), then the temperature and weather icon, and under the tide curve the estimated wave height in metres (green under 0.5, orange 0.5–1, red over 1), for about the next 10 days. Wind and waves are for open water just off the chosen tide station. Waves are estimated from the forecast wind and how far it blows over open water; no ocean swell reaches the inner Strait. Hover a block for details. Actual currents in passes can differ, so check CHS current tables for Gabriola Passage and other narrows. Weather at the top of each day is Environment Canada's 7-day town forecast: high / low °C and chance of rain.</p></div></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="vhfbtn" id="vhfbtn" aria-expanded="false" aria-controls="vhfpop">VHF</button><div class="vhfpop" id="vhfpop" hidden><div class="vhfpop-top"><b>VHF channels</b><button type="button" class="linkbtn" id="vhfclose">Close</button></div><div class="rows vhf">
+  <div class="mapwrap"><div id="map"></div><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind · knots</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar" hidden><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div></div><div class="cal" id="cal" hidden role="dialog" aria-modal="true" aria-labelledby="cal-title"><div class="cal-card"><div class="cal-top"><h2 id="cal-title">Tide &amp; moon calendar</h2><button type="button" class="sos-x" id="cal-close">Close</button></div><div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-month"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><select id="cal-station" class="dlsel" aria-label="Tide station" hidden></select><select id="cal-wx" class="dlsel" aria-label="Weather for"></select><span class="cal-tide" id="cal-tide"></span></div><div class="cal-grid" id="cal-grid"></div><div class="cal-day" id="cal-day"></div><div class="cal-ins" id="cal-ins"></div><p class="note">Tide heights in metres above chart datum (lowest normal tide), from the Canadian Hydrographic Service. ▲ high (blue) and ▼ low tide, with time (24-hour) and height in metres. Moon phases are calculated and accurate to within about half a day. Each day's small chart is the tide from midnight to midnight (same scale all month). Its colour shows how fast the tide is changing, a guide to current strength: <b style="color:#e03131">red</b> strong (over 0.6 m/h), <b style="color:#f08c00">orange</b> moderate, <b style="color:#2f9e44">green</b> weak, near slack water. Each day is split into four 6-hour blocks (00–06, 06–12, 12–18, 18–24): each block shows the wind (arrow and knots: green under 10, orange 10–20, red over 20), then the temperature and weather icon, and under the tide curve the estimated wave height in metres (green under 0.5, orange 0.5–1, red over 1), for the next 14 days. Days 1–7 use Environment Canada's town forecast; days 8–10 the global model (GDPS); days 11–14 the ensemble average (GEPS), which gives wind speed without direction, so those days have no arrow or wave estimate. Past blocks are shown greyed out with what was actually measured at the nearest weather station (Point Atkinson or Entrance Island): temperature, wind, rain icon when rain fell, and waves estimated from that wind. Wind and waves are for open water just off the chosen tide station. Waves are estimated from the forecast wind and how far it blows over open water; no ocean swell reaches the inner Strait. Hover a block for details. Actual currents in passes can differ, so check CHS current tables for Gabriola Passage and other narrows. Hover a block to see where its numbers came from.</p></div></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="vhfbtn" id="vhfbtn" aria-expanded="false" aria-controls="vhfpop">VHF</button><div class="vhfpop" id="vhfpop" hidden><div class="vhfpop-top"><b>VHF channels</b><button type="button" class="linkbtn" id="vhfclose">Close</button></div><div class="rows vhf">
         <div class="vr em"><b>16</b><span>Distress, safety and calling · <i>*16</i> on a cell phone</span></div>
         <div class="vr"><b>83A</b><span>Coast Guard working channel</span></div>
         <div class="vr"><b>12</b><span>Vessel Traffic: Vancouver Harbour, English Bay, Howe Sound</span></div>
@@ -1425,9 +1426,11 @@ function blockWeather(key, b, wxd){
   const temp = tempOf(per, b === 1 || b === 2 ? 'high' : 'low') ?? tempOf(per, 'high') ?? tempOf(per, 'low');
   return {icon: per.abbreviatedForecast?.icon?.url, temp, text: `${per.abbreviatedForecast?.textSummary?.en || ''}${temp != null ? ', ' + (b === 1 || b === 2 ? 'high ' : 'low ') + temp + '°' : ''}${pop ? ', ' + pop + '% rain' : ''}`, pop};
 }
+function blockStart(key, b){ return localMidnight(new Date(Date.UTC(+key.slice(0,4), +key.slice(5,7)-1, +key.slice(8), 20))) + b*6*3600e3; }
 function blocksHTML(key, wxd){
-  return `<span class="b4">${[0,1,2,3].map(b => { const w = blockWeather(key, b, wxd);
-    return `<span class="bk" data-key="${key}" data-b="${b}" title="${BLOCK_NAMES[b]}${w ? ': ' + esc2(w.text) : ''}">${w?.icon ? `<img src="${w.icon}" alt="">` : '<i class="noic"></i>'}<span class="wi">${w?.temp != null ? `<b>${w.temp}°</b>` : ''}</span><span class="wd"></span></span>`; }).join('')}</span>`;
+  const now = Date.now();
+  return `<span class="b4">${[0,1,2,3].map(b => { const past = blockStart(key, b) + 6*3600e3 <= now; const w = past ? null : blockWeather(key, b, wxd);
+    return `<span class="bk${past ? ' past' : ''}" data-key="${key}" data-b="${b}"${!past && !w ? ' data-nowx="1"' : ''} title="${BLOCK_NAMES[b]}${w ? ': ' + esc2(w.text) : ''}">${w?.icon ? `<img src="${w.icon}" alt="">` : '<i class="noic"></i>'}<span class="wi">${w?.temp != null ? `<b>${w.temp}°</b>` : ''}</span><span class="wd"></span></span>`; }).join('')}</span>`;
 }
 // Open-water points used for the calendar's wind and wave estimates, just off each tide station
 const CAL_POINTS = {'07795': {lat:49.31, lon:-123.30}, '07917': {lat:49.205, lon:-123.80}};
@@ -1449,35 +1452,131 @@ function waveHeight(kn, fetchM){
   return Math.min(0.0016 * U * Math.sqrt(fetchM / g), 0.243 * U * U / g);
 }
 const windCache = {};
+// One value at a point from a GeoMet layer (WMS GetFeatureInfo)
+const fiCache = {};
+async function pointValue(layer, t, loc){
+  const iso = new Date(t).toISOString().replace('.000','');
+  const k = `${layer}|${iso}|${loc.lat},${loc.lon}`;
+  if (k in fiCache) return fiCache[k];
+  const b = `${loc.lon-0.02},${loc.lat-0.02},${loc.lon+0.02},${loc.lat+0.02}`;
+  try {
+    const j = await (await fetch(`${CONFIG.geomet}?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=${layer}&query_layers=${layer}&srs=EPSG:4326&bbox=${b}&width=11&height=11&x=5&y=5&info_format=application/json&time=${iso}`)).json();
+    const v = j.features?.[0]?.properties?.value;
+    return fiCache[k] = (typeof v === 'number' && Math.abs(v) < 9000) ? v : null;
+  } catch(e){ return fiCache[k] = null; }
+}
+const ECI = c => `https://weather.gc.ca/weathericons/${c}.gif`;
+const snapH = (t, h) => Math.round(t / (h*3600e3)) * h*3600e3;
+// Weather from the models for blocks past the 7-day town forecast
+async function modelWeather(loc, t, b){
+  const day = b === 1 || b === 2, ens = modelFor(new Date(t)) === CONFIG.windModels[2];
+  if (!ens){
+    const t3 = snap3(new Date(t)).getTime(), t6 = snapH(t + 3*3600e3, 6);
+    const [temp, cloud, rain] = await Promise.all([pointValue('GDPS_15km_AirTemp_2m', t3, loc), pointValue('GDPS_15km_TotalCloudCover', t3, loc), pointValue('GDPS_15km_Precip-Accum6h', t6, loc)]);
+    if (temp == null && cloud == null) return null;
+    const code = rain >= 1.5 ? '12' : rain >= 0.3 ? (day ? '06' : '36') : cloud == null ? null : cloud < 20 ? (day ? '00' : '30') : cloud < 50 ? (day ? '02' : '32') : cloud < 80 ? (day ? '03' : '33') : '10';
+    const sky = rain >= 1.5 ? 'Rain' : rain >= 0.3 ? 'Showers' : cloud < 20 ? 'Clear' : cloud < 50 ? 'Partly cloudy' : cloud < 80 ? 'Mostly cloudy' : 'Cloudy';
+    return {icon: code && ECI(code), temp: temp == null ? null : Math.round(temp), text: `${sky}${temp != null ? ', ' + Math.round(temp) + '°' : ''}${rain != null ? ', ' + rain.toFixed(1) + ' mm rain' : ''} (global model GDPS)`};
+  }
+  const t3 = snap3(new Date(t)).getTime(), t12 = Math.ceil(t / 43200e3) * 43200e3;
+  const [temp, r24] = await Promise.all([pointValue('GEPS.DIAG.3_TT.ERMEAN', t3, loc), pointValue('GEPS.DIAG.24_PRMM.ERMEAN', t12, loc)]);
+  if (temp == null) return null;
+  const r6 = r24 == null ? null : r24 / 4;
+  const code = r6 == null ? null : r6 >= 1.5 ? '12' : r6 >= 0.4 ? (day ? '06' : '36') : (day ? '03' : '33');
+  return {icon: code && ECI(code), temp: Math.round(temp), text: `${r6 >= 1.5 ? 'Rain likely' : r6 >= 0.4 ? 'Some rain' : 'Mostly dry'}, ${Math.round(temp)}°${r24 != null ? ', about ' + r24.toFixed(0) + ' mm that day' : ''} (ensemble average GEPS, a trend only)`};
+}
+// Measured weather for past blocks: Environment Canada climate stations near each tide station
+const OBS_STATIONS = {'07795': {id:'1106200', name:'Point Atkinson'}, '07917': {id:'1022689', name:'Entrance Island'}};
+const obsCache = {};
+async function monthObs(code, y, m){
+  const st = OBS_STATIONS[code]; if (!st) return [];
+  const k = `${st.id}-${y}-${m}`; if (obsCache[k]) return obsCache[k];
+  const iso = d => d.toISOString().replace(/\.\d{3}Z$/,'Z');
+  const from = new Date(Date.UTC(y, m, 1) - 864e5), to = new Date(Math.min(Date.now(), Date.UTC(y, m + 1, 1) + 864e5));
+  if (from > to) return [];
+  try {
+    const j = await (await fetch(`https://api.weather.gc.ca/collections/climate-hourly/items?f=json&CLIMATE_IDENTIFIER=${st.id}&datetime=${iso(from)}/${iso(to)}&limit=1000&properties=UTC_DATE,TEMP,WIND_DIRECTION,WIND_SPEED,PRECIP_AMOUNT`)).json();
+    return obsCache[k] = (j.features || []).map(f => { const p = f.properties; return {t: Date.parse(p.UTC_DATE + 'Z'), temp: p.TEMP, dir: p.WIND_DIRECTION, kmh: p.WIND_SPEED, rain: p.PRECIP_AMOUNT}; });
+  } catch(e){ return []; }
+}
+function obsBlock(obs, t0){
+  const hrs = obs.filter(o => o.t >= t0 && o.t < t0 + 6*3600e3);
+  if (!hrs.length) return null;
+  const T = hrs.filter(h => h.temp != null), W = hrs.filter(h => h.kmh != null && h.dir != null);
+  const R = hrs.filter(h => h.rain != null), rain = R.length ? R.reduce((s, h) => s + h.rain, 0) : null;
+  let wind = null;
+  if (W.length){
+    const kn = W.reduce((s, h) => s + h.kmh, 0) / W.length / 1.852;
+    const x = W.reduce((s, h) => s + h.kmh * Math.sin(h.dir * 10 * Math.PI / 180), 0), y = W.reduce((s, h) => s + h.kmh * Math.cos(h.dir * 10 * Math.PI / 180), 0);
+    const gust = Math.max(...W.map(h => h.kmh)) / 1.852;
+    wind = {kn, dir: (Math.atan2(x, y) * 180 / Math.PI + 360) % 360, max: gust};
+  }
+  return {temp: T.length ? Math.round(T.reduce((s, h) => s + h.temp, 0) / T.length) : null, rain, wind};
+}
+function paintWind(key, b, w, loc, src){
+  const el = document.querySelector(`.bk[data-key="${key}"][data-b="${b}"] .wd`);
+  if (!el || !w) return;
+  const cls = w.kn < 10 ? 'c' : w.kn < 20 ? 'w' : 'x';
+  el.className = 'wd ' + cls + (w.dir == null ? ' so' : '');
+  el.innerHTML = (w.dir != null ? `<span class="dir" style="transform:rotate(${(w.dir + 180) % 360}deg)">↑</span>` : '') + `<span class="n">${w.kn.toFixed(0)}</span>`;
+  el.parentElement.title += ` · wind ${w.dir != null ? compass(w.dir) + ' ' : ''}${w.kn.toFixed(0)} kn${w.max ? ' (strongest hour ' + w.max.toFixed(0) + ' kn)' : ''}${src ? ' · ' + src : ''}`;
+  if (w.dir == null) return;
+  const hs = waveHeight(w.kn, fetchMetres(loc.lat, loc.lon, w.dir));
+  const wv = document.querySelector(`.wv[data-key="${key}"][data-b="${b}"]`);
+  if (wv){ wv.textContent = hs < 0.05 ? '0' : hs.toFixed(1); wv.className = 'wv ' + (hs < 0.5 ? 'c' : hs < 1 ? 'w' : 'x') + (wv.classList.contains('past') ? ' past' : '');
+    wv.title = `${BLOCK_NAMES[b]}: waves about ${hs.toFixed(1)} m (${(hs*3.281).toFixed(0)} ft), estimated from ${src && src.startsWith('measured') ? 'the measured' : 'the forecast'} wind. No ocean swell reaches the inner Strait.`; }
+}
 async function loadBlockWinds(y, m, days, st){
-  const now = Date.now(), jobs = [];
+  const now = Date.now(), jobs = [], pastJobs = [];
   for (let d = 1; d <= days; d++){
     const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const t0 = localMidnight(new Date(Date.UTC(y, m, d, 20)));
     for (let b = 0; b < 4; b++){
-      const t = t0 + (b*6 + 3) * 3600e3;
-      if (t < now - 3*3600e3 || t > now + 10*864e5) continue;
-      jobs.push({key, b, t});
+      const t0 = blockStart(key, b), t = t0 + 3*3600e3;
+      if (t0 + 6*3600e3 <= now) pastJobs.push({key, b, t0});
+      else if (t <= now + 14*864e5) jobs.push({key, b, t: Math.max(t, Math.ceil(now / 3600e3) * 3600e3)});
     }
   }
-  const loc = CAL_POINTS[calStation.value] || {lat: st.lat, lon: st.lon};
+  const code = calStation.value, loc = CAL_POINTS[code] || {lat: st.lat, lon: st.lon};
+  const stale = () => !document.getElementById('cal') || document.getElementById('cal').hidden || calState.y !== y || calState.m !== m || calStation.value !== code;
+  // Past: measured values, greyed out
+  if (pastJobs.length){
+    monthObs(code, y, m).then(obs => {
+      if (stale()) return;
+      const sname = OBS_STATIONS[code]?.name || 'station';
+      for (const j of pastJobs){
+        const o = obsBlock(obs, j.t0); if (!o) continue;
+        const bk = document.querySelector(`.bk[data-key="${j.key}"][data-b="${j.b}"]`); if (!bk) continue;
+        const ic = o.rain >= 1 ? '12' : o.rain >= 0.2 ? (j.b === 1 || j.b === 2 ? '06' : '36') : null;
+        if (ic) bk.querySelector('i.noic')?.replaceWith(Object.assign(document.createElement('img'), {src: ECI(ic), alt: ''}));
+        if (o.temp != null) bk.querySelector('.wi').innerHTML = `<b>${o.temp}°</b>`;
+        bk.title = `${BLOCK_NAMES[j.b]}: measured at ${sname}${o.temp != null ? ', ' + o.temp + '°' : ''}${o.rain != null ? ', ' + (o.rain > 0 ? o.rain.toFixed(1) + ' mm rain' : 'dry') : ''}`;
+        paintWind(j.key, j.b, o.wind, loc, `measured at ${sname}`);
+      }
+    });
+  }
+  // Future: forecast wind (and model weather where the town forecast ends)
   for (let i = 0; i < jobs.length; i += 8){
     const part = jobs.slice(i, i + 8);
     await Promise.all(part.map(async j => {
-      const ck = `${loc.lat},${loc.lon},${Math.round(j.t / 3600e3)}`;
-      const w = windCache[ck] !== undefined ? windCache[ck] : (windCache[ck] = await windAt(loc, new Date(Math.round(j.t / 3600e3) * 3600e3)));
-      const el = document.querySelector(`.bk[data-key="${j.key}"][data-b="${j.b}"] .wd`);
-      if (!el || !w) return;
-      const cls = w.kn < 10 ? 'c' : w.kn < 20 ? 'w' : 'x';
-      el.className = 'wd ' + cls;
-      el.innerHTML = `<span class="dir" style="transform:rotate(${(w.dir + 180) % 360}deg)">↑</span><span class="n">${w.kn.toFixed(0)}</span>`;
-      el.parentElement.title += ` · wind ${compass(w.dir)} ${w.kn.toFixed(0)} kn`;
-      const hs = waveHeight(w.kn, fetchMetres(loc.lat, loc.lon, w.dir));
-      const wv = document.querySelector(`.wv[data-key="${j.key}"][data-b="${j.b}"]`);
-      if (wv){ wv.textContent = hs < 0.05 ? '0' : hs.toFixed(1); wv.className = 'wv ' + (hs < 0.5 ? 'c' : hs < 1 ? 'w' : 'x');
-        wv.title = `${BLOCK_NAMES[j.b]}: waves about ${hs.toFixed(1)} m (${(hs*3.281).toFixed(0)} ft), estimated from wind. No ocean swell reaches the inner Strait.`; }
+      const tt = new Date(Math.round(j.t / 3600e3) * 3600e3), ck = `${loc.lat},${loc.lon},${tt.getTime() / 3600e3}`;
+      const bk = document.querySelector(`.bk[data-key="${j.key}"][data-b="${j.b}"]`);
+      if (bk?.dataset.nowx){
+        const w = await modelWeather(loc, tt.getTime(), j.b);
+        if (w && bk.isConnected){
+          if (w.icon) bk.querySelector('i.noic')?.replaceWith(Object.assign(document.createElement('img'), {src: w.icon, alt: ''}));
+          if (w.temp != null) bk.querySelector('.wi').innerHTML = `<b>${w.temp}°</b>`;
+          bk.title = `${BLOCK_NAMES[j.b]}: ${w.text}`;
+        }
+      }
+      let w = windCache[ck] !== undefined ? windCache[ck] : (windCache[ck] = await windAt(loc, tt));
+      let src = '';
+      if (!w && modelFor(tt) === CONFIG.windModels[2]){
+        const ms = await pointValue(CONFIG.windModels[2].speed, snap3(tt).getTime(), loc);
+        if (ms != null){ w = {kn: ms * 1.94384, dir: null}; src = 'ensemble average, speed only'; }
+      }
+      paintWind(j.key, j.b, w, loc, src);
     }));
-    if (!document.getElementById('cal') || document.getElementById('cal').hidden || calState.y !== y || calState.m !== m) return;
+    if (stale()) return;
   }
 }
 async function renderCal(){
@@ -1505,7 +1604,7 @@ async function renderCal(){
     const p = moonPhase(Date.UTC(y, m, d, 20));
     html += `<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
       `<span class="top" title="${phases[key] || moonName(p)}">${d}${moonSVG(p, 16)}</span>` +
-      (tides ? `<span class="tide-grp"><span class="mini">${miniTide(localMidnight(new Date(Date.UTC(y, m, d, 20))), tides.ev, mLo, mHi)}${blocksHTML(key, wxd)}</span><span class="wv4">${[0,1,2,3].map(b => `<span class="wv" data-key="${key}" data-b="${b}"></span>`).join('')}</span>` : '') +
+      (tides ? `<span class="tide-grp"><span class="mini">${miniTide(localMidnight(new Date(Date.UTC(y, m, d, 20))), tides.ev, mLo, mHi)}${blocksHTML(key, wxd)}</span><span class="wv4">${[0,1,2,3].map(b => `<span class="wv${blockStart(key, b) + 6*3600e3 <= Date.now() ? ' past' : ''}" data-key="${key}" data-b="${b}"></span>`).join('')}</span>` : '') +
       (ev.length ? ev.map(e => `<span class="tt ${e.high ? 'hi' : 'lo'}" title="${e.high ? 'High' : 'Low'} ${fmt(e.t,{hour:'numeric',minute:'2-digit'})}, ${e.v.toFixed(1)} m"><i>${e.high ? '▲' : '▼'}</i>${shortTime(e.t)} <em>${e.v.toFixed(1)}</em></span>`).join('') : (tides ? '<span class="tt">–</span>' : '')) + (tides ? '</span>' : '') +
       `</button>`;
   }
