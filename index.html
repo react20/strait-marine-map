@@ -1519,7 +1519,7 @@ function paintWind(key, b, w, loc, src){
   const cls = w.kn < 10 ? 'c' : w.kn < 20 ? 'w' : 'x';
   el.className = 'wd ' + cls + (w.dir == null ? ' so' : '');
   el.innerHTML = (w.dir != null ? `<span class="dir" style="transform:rotate(${(w.dir + 180) % 360}deg)">↑</span>` : '') + `<span class="n">${w.kn.toFixed(0)}</span>`;
-  el.parentElement.title += ` · wind ${w.dir != null ? compass(w.dir) + ' ' : ''}${w.kn.toFixed(0)} kn${w.max ? ' (strongest hour ' + w.max.toFixed(0) + ' kn)' : ''}${src ? ' · ' + src : ''}`;
+  el.parentElement.title += ` · wind ${w.dir != null ? compass(w.dir) + ' ' : ''}${w.kn.toFixed(0)} kn${w.max ? ' (strongest hour ' + w.max.toFixed(0) + ' kn)' : ''}${src && !el.parentElement.title.includes(src) ? ' · ' + src : ''}`;
   if (w.dir == null) return;
   const hs = waveHeight(w.kn, fetchMetres(loc.lat, loc.lon, w.dir));
   const wv = document.querySelector(`.wv[data-key="${key}"][data-b="${b}"]`);
@@ -1544,8 +1544,8 @@ async function loadBlockWinds(y, m, days, st){
       if (stale()) return;
       const sname = OBS_STATIONS[code]?.name || 'station';
       for (const j of pastJobs){
-        const o = obsBlock(obs, j.t0); if (!o) continue;
-        const bk = document.querySelector(`.bk[data-key="${j.key}"][data-b="${j.b}"]`); if (!bk) continue;
+        const o = obsBlock(obs, j.t0), bk = document.querySelector(`.bk[data-key="${j.key}"][data-b="${j.b}"]`); if (!bk) continue;
+        if (!o){ if (j.t0 > Date.now() - 2*864e5) bk.title = `${BLOCK_NAMES[j.b]}: measurements from ${sname} not published yet (they arrive a few hours late)`; continue; }
         const ic = o.rain >= 1 ? '12' : o.rain >= 0.2 ? (j.b === 1 || j.b === 2 ? '06' : '36') : null;
         if (ic) bk.querySelector('i.noic')?.replaceWith(Object.assign(document.createElement('img'), {src: ECI(ic), alt: ''}));
         if (o.temp != null) bk.querySelector('.wi').innerHTML = `<b>${o.temp}°</b>`;
