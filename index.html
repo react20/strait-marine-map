@@ -399,6 +399,8 @@ const CONFIG = {
   },
   // Live ships from the AIS helper program running on this computer (run-ais-helper.bat)
   aisFeed: 'http://127.0.0.1:8765/vessels',
+  // Cloud relay (works on phones). Set once via the map link ?ais=<address> or here.
+  aisCloud: '',
   // Coast Guard / DFO ships: names starting CCGS, or MMSI numbers you add here
   govNames: /^(CCGS|C\.C\.G\.S|CCG\b|CG\s|DFO\b|CANADIAN COAST GUARD)/i,
   govMmsi: []
@@ -866,10 +868,22 @@ function boatIcon(v, gov){
 }
 const esc2 = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const IS_PHONE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+// Cloud relay address: from the link (?ais=...), saved settings, or CONFIG
+(function(){ try {
+  const q = new URLSearchParams(location.search).get('ais');
+  if (q && /^https:\/\/[\w.-]+\.workers\.dev\/?/.test(q)){ localStorage.setItem('ais-cloud', q.replace(/\/(vessels)?$/, '')); history.replaceState(null, '', location.pathname); }
+} catch(e){} })();
+const aisCloud = () => { let u = ''; try { u = localStorage.getItem('ais-cloud') || ''; } catch(e){} u = u || CONFIG.aisCloud; return u ? u.replace(/\/(vessels)?$/, '') + '/vessels' : ''; };
+async function aisData(){
+  // On a computer, try the local helper first; otherwise (and on phones) use the cloud relay
+  if (!IS_PHONE){ try { return await (await fetch(CONFIG.aisFeed, {cache:'no-store'})).json(); } catch(e){ if (!aisCloud()) throw e; } }
+  if (!aisCloud()) throw new Error('none');
+  return await (await fetch(aisCloud(), {cache:'no-store'})).json();
+}
 async function loadShips(){
   if (!map.hasLayer(govLayer) && !map.hasLayer(otherLayer)) return;
   try {
-    const d = await (await fetch(CONFIG.aisFeed, {cache:'no-store'})).json();
+    const d = await aisData();
     govLayer.clearLayers(); otherLayer.clearLayers();
     let gov = 0, other = 0;
     for (const v of d.vessels){
@@ -882,13 +896,13 @@ async function loadShips(){
       if (g){ mk.bindTooltip(esc2(v.name), {permanent:true, direction:'right', offset:[10,0], className:'lbl'}); mk.addTo(govLayer); gov++; }
       else { mk.addTo(otherLayer); other++; }
     }
-    const live = d.connected ? 'live' : 'reconnecting';
+    const live = d.connected ? 'live' : d.error ? 'key problem' : 'connecting';
     setGovStatus(d.connected ? 'ok' : 'warn', `${gov} ${live}`);
     setOtherStatus(d.connected ? 'ok' : 'warn', `${other} ${live}`);
   } catch(e){
     // The helper runs on a computer; a phone can't reach it, so say so plainly
-    const msg = IS_PHONE ? 'computer only' : 'helper off';
-    setGovStatus(IS_PHONE ? 'warn' : 'bad', msg); setOtherStatus(IS_PHONE ? 'warn' : 'bad', msg);
+    const msg = aisCloud() ? 'relay offline' : IS_PHONE ? 'computer only' : 'helper off';
+    setGovStatus(IS_PHONE && !aisCloud() ? 'warn' : 'bad', msg); setOtherStatus(IS_PHONE && !aisCloud() ? 'warn' : 'bad', msg);
   }
 }
 loadShips(); setInterval(() => { if (!IS_PHONE || document.visibilityState === 'visible') loadShips(); }, IS_PHONE ? 60000 : 15000);
@@ -1837,7 +1851,7 @@ wxLayer.on('add remove', () => setTimeout(drawWx));
 loadWx(); setInterval(loadWx, 30*60e3);
 
 // ---------- Google sign-in: save settings to your account ----------
-const SYNC_KEYS = ['cal-station','cal-wx','sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta','sos-what-MAYDAY','sos-what-PAN','dlspot'];
+const SYNC_KEYS = ['ais-cloud','cal-station','cal-wx','sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta','sos-what-MAYDAY','sos-what-PAN','dlspot'];
 (function setupAccount(){
   const box = document.getElementById('acct');
   if (!CONFIG.firebase || typeof firebase === 'undefined' || location.protocol === 'file:') return;   // only on the hosted site
