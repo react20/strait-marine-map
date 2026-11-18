@@ -224,6 +224,24 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .cal-c .bk .wi{min-height:9px}
 .cal-c .past,.cal-c .past .wd{opacity:.5;filter:grayscale(1)}
 .cal-c.pastday .mini svg,.cal-c.pastday .tt,.cal-c.pastday .top svg{opacity:.5;filter:grayscale(1)}.cal-c.pastday .top{opacity:.6}.cal-c .tt.gone{opacity:.5;filter:grayscale(1)}.cal-c .wd.so .n{font-style:italic}
+/* Calendar layout: label column, sticky weekday header, weather / waves / tide rows */
+.cal-grid{grid-template-columns:46px repeat(7,minmax(0,1fr))}
+.cal-h{position:sticky;top:0;z-index:5;background:var(--panel);padding:6px 0 4px;box-shadow:0 3px 0 var(--panel)}
+.cal-c .top{height:17px;flex:none}
+.cal-c .tide-grp{margin-top:0}
+.cal-c .b4{position:static !important;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));height:34px}
+.cal-c .bk img,.cal-c .bk .noic{height:12px !important;flex:none}
+.cal-c .bk .wi{height:10px;min-height:0}.cal-c .bk .wd{height:11px;min-height:0;margin-top:1px}
+.cal-c .mini{height:44px;margin:1px 0 2px}
+.cal-c .wv4{border-bottom:0;height:14px;padding:1px 0 0}
+.cal-lab{background:none;border-color:transparent;cursor:default;padding-left:0;padding-right:3px}.cal-lab:hover{border-color:transparent}
+.cal-lab .lab,.cal-lab .tt{font:500 8.5px/1 var(--sans);color:var(--muted);text-align:right;white-space:nowrap;letter-spacing:0}
+.cal-lab .b4.lab{display:flex;flex-direction:column;align-items:flex-end}
+.cal-lab .b4.lab span{height:12px;display:flex;align-items:center}.cal-lab .b4.lab span+span{height:10px}.cal-lab .b4.lab span:last-child{height:11px;margin-top:1px}
+.cal-lab .wv4.lab{display:flex;align-items:center;justify-content:flex-end}
+.cal-lab .mini.lab{background:none;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding:1px 0}
+.cal-lab .tt{line-height:1.25}
+@media (max-width:640px){.cal-grid{grid-template-columns:40px repeat(7,minmax(0,1fr))}.cal-lab .lab,.cal-lab .tt{font-size:7.5px}}
 .cal-tide{font-size:13px;color:var(--muted);padding:6px 4px;white-space:nowrap}
 .cal-bar #cal-wx{margin-left:auto}
 .sos-card.pan{border-top-color:#e8890c}
@@ -1595,7 +1613,12 @@ async function renderCal(){
   const allV = (tides?.ev || []).map(e => e.v), mLo = allV.length ? Math.min(...allV) : 0, mHi = allV.length ? Math.max(...allV) : 1;
   // range per day, to flag the biggest tides of the month
   const ranges = [];
-  let html = WD.map(d => `<div class="cal-h">${d}</div>`).join('') + '<div class="cal-c empty"></div>'.repeat(lead);
+  // Row labels with units, at the far left of each week
+  const labCell = () => tides ? `<div class="cal-c cal-lab" aria-hidden="true"><span class="top"></span><span class="tide-grp"><span class="b4 lab"><span>Sky</span><span>Temp °C</span><span>Wind kn</span></span><span class="wv4 lab">Waves m</span><span class="mini lab"><span>${mHi.toFixed(1)}</span><span>Tide m</span><span>${mLo.toFixed(1)}</span></span><span class="tt">Hi/Lo</span><span class="tt">time · m</span></span></div>` : '<div class="cal-c cal-lab"></div>';
+  let html = '<div class="cal-h"></div>' + WD.map(d => `<div class="cal-h">${d}</div>`).join('');
+  let col = 0;
+  const push = cell => { if (col % 7 === 0) html += labCell(); html += cell; col++; };
+  for (let i = 0; i < lead; i++) push('<div class="cal-c empty"></div>');
   for (let d = 1; d <= days; d++){
     const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const ev = tides?.byDay[key] || [];
@@ -1603,11 +1626,11 @@ async function renderCal(){
     const range = hi.length && lo.length ? Math.max(...hi) - Math.min(...lo) : null;
     if (range != null) ranges.push(range);
     const p = moonPhase(Date.UTC(y, m, d, 20));
-    html += `<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key < todayKey ? ' pastday' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
+    push(`<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key < todayKey ? ' pastday' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
       `<span class="top" title="${phases[key] || moonName(p)}">${d}${moonSVG(p, 16)}</span>` +
-      (tides ? `<span class="tide-grp"><span class="mini">${miniTide(localMidnight(new Date(Date.UTC(y, m, d, 20))), tides.ev, mLo, mHi)}${blocksHTML(key, wxd)}</span><span class="wv4">${[0,1,2,3].map(b => `<span class="wv${blockStart(key, b) + 6*3600e3 <= Date.now() ? ' past' : ''}" data-key="${key}" data-b="${b}"></span>`).join('')}</span>` : '') +
+      (tides ? `<span class="tide-grp">${blocksHTML(key, wxd)}<span class="wv4">${[0,1,2,3].map(b => `<span class="wv${blockStart(key, b) + 6*3600e3 <= Date.now() ? ' past' : ''}" data-key="${key}" data-b="${b}"></span>`).join('')}</span><span class="mini">${miniTide(localMidnight(new Date(Date.UTC(y, m, d, 20))), tides.ev, mLo, mHi)}</span>` : '') +
       (ev.length ? ev.map(e => `<span class="tt ${e.high ? 'hi' : 'lo'}${e.t < Date.now() ? ' gone' : ''}" title="${e.high ? 'High' : 'Low'} ${fmt(e.t,{hour:'numeric',minute:'2-digit'})}, ${e.v.toFixed(1)} m"><i>${e.high ? '▲' : '▼'}</i>${shortTime(e.t)} <em>${e.v.toFixed(1)}</em></span>`).join('') : (tides ? '<span class="tt">–</span>' : '')) + (tides ? '</span>' : '') +
-      `</button>`;
+      `</button>`);
   }
   grid.innerHTML = html;
   renderInsights(y, m, days, tides, phases, wxd);
