@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strait of Georgia Marine Map</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: chart-room console. Full-height map, docked side panel; panel stacks under the map on phones */
+:root{
+  --bg:#eef2f4; --panel:#ffffff; --fg:#14232e; --muted:#5a6d7a; --line:#d3dde3;
+  --accent:#c0392b; --pin:#0b5d8a; --ok:#1e7d4f; --warn:#b86e00; --bad:#b3261e;
+  --sans:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0c151c; --panel:#121e27; --fg:#e2ebf0; --muted:#8ea2af; --line:#22333f;
+  --accent:#ff6b5b; --pin:#5cc0f2; --ok:#4cc98a; --warn:#f0a63a; --bad:#ff7a70; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--sans)}
+.app{display:grid;grid-template-columns:1fr 360px;height:100%}
+.mapwrap{position:relative;min-height:0}
+#map{height:100%;background:#a9c9dc}
+aside{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:18px}
+h1{font-size:18px;margin:0;font-weight:600}
+.sub{color:var(--muted);margin:2px 0 0;font-size:13px}
+h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+section{display:flex;flex-direction:column}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button,.btn{font:inherit;font-size:13px;padding:5px 10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:4px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--pin);border-color:var(--pin);color:#fff}
+.lyr{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.lyr:first-of-type{border-top:1px solid var(--line)}
+.lyr small{display:block;color:var(--muted);font-size:11px}
+.st{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.st.ok{color:var(--ok)} .st.wait{color:var(--muted)} .st.warn{color:var(--warn)} .st.bad{color:var(--bad)}
+.time{display:flex;flex-direction:column;gap:6px}
+.time input{width:100%}
+.time output{font-family:var(--mono);font-size:12px}
+.tide{padding:8px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.tide b{font-weight:600}
+.mf{padding:8px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:3px}
+.mf b{font-weight:600}
+.mf p{margin:0;font-size:13px}
+.mf .k{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.mf .warn{color:var(--bad);font-weight:600}
+.tide .ev{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.tide svg{width:100%;height:46px;display:block}
+.note{color:var(--muted);font-size:12px;margin:0}
+.model{margin:0;font-size:12px;font-weight:600;color:var(--pin);border:1px solid var(--line);border-left:3px solid var(--pin);padding:4px 8px;border-radius:3px}
+.locbtn{position:absolute;left:10px;top:84px;z-index:500;font:600 12px var(--sans);padding:6px 10px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--fg);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.locbtn[aria-pressed="true"]{background:var(--pin);border-color:var(--pin);color:#fff}
+.steps button{flex:1;min-width:0;padding:5px 4px;font-variant-numeric:tabular-nums}
+.dlsel{font:inherit;font-size:13px;padding:4px 6px;margin:2px 0 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);max-width:100%}
+.dl{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.dl th{text-align:left;font-weight:600;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:4px 4px;border-bottom:1px solid var(--line)}
+.dl td{padding:4px;border-bottom:1px solid var(--line);white-space:nowrap}
+.dl tr.hr{cursor:pointer}
+.dl tr.hr:hover td{background:var(--bg)}
+.dl tr.on td{background:var(--bg);font-weight:600}
+.dl tr.day td{font-weight:600;color:var(--muted);font-size:11px;padding-top:8px;border-bottom:1px solid var(--line)}
+.kn{display:inline-block;min-width:26px;text-align:right;font-weight:600}
+.kn.c{color:var(--ok)} .kn.w{color:var(--warn)} .kn.x{color:var(--bad)}
+.dir{display:inline-block;width:12px;text-align:center}
+.wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.wkh{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:center;padding-bottom:2px}
+.wkd{display:flex;flex-direction:column;gap:2px;min-width:0}
+.wkd .dt{font-size:11px;font-weight:600;text-align:center}
+.wkd.out{opacity:.35}
+.blk{font:600 11px var(--mono);padding:3px 0;border:1px solid var(--line);border-radius:3px;background:var(--bg);color:var(--fg);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:2px;min-width:0}
+.blk.c{color:var(--ok)} .blk.w{color:var(--warn)} .blk.x{color:var(--bad);border-color:var(--bad)}
+.blk[disabled]{cursor:default;color:var(--muted)}
+.blk.on{outline:2px solid var(--pin);outline-offset:0}
+.blk .dir{width:9px;font-size:10px}
+.dlhead{margin:4px 0 0;font-size:12px;font-weight:600}
+.tc{position:relative}
+.tide .tc svg{height:64px}
+.tv{position:absolute;transform:translate(-50%,-115%);font:600 10px var(--mono);color:var(--pin);pointer-events:auto;white-space:nowrap;text-shadow:0 0 2px var(--panel),0 0 2px var(--panel)}
+.tv.lo{transform:translate(-50%,15%);color:var(--muted)}
+.ty{position:absolute;right:0;transform:translateY(-50%);font:9px var(--mono);color:var(--muted);text-shadow:0 0 2px var(--panel)}
+.tls{position:relative;height:13px}
+.tl{position:absolute;transform:translateX(3px);font:10px var(--mono);color:var(--muted);white-space:nowrap}
+.vhf{display:flex;flex-direction:column}
+.vr{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.vr b{font:600 13px var(--mono);color:var(--pin)}
+.vr.em b{color:var(--bad)}
+.vr.wx b{color:var(--muted)}
+.vr i{font-style:normal;font-family:var(--mono)}
+.vhfl{background:var(--panel);border:1px solid var(--pin);color:var(--pin);border-radius:3px;padding:1px 5px;font:600 11px var(--mono);white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.vhfl.wx{border-color:var(--muted);color:var(--muted)}
+.navbar{position:absolute;top:58px;left:50%;transform:translateX(-50%);z-index:600;display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 14px;box-shadow:0 2px 6px rgba(0,0,0,.25);max-width:calc(100% - 120px)}
+.nb-main{display:flex;align-items:center;gap:8px}
+.nb-arrow{display:inline-block;color:#d6336c;font-size:20px;line-height:1;transition:transform .4s}
+.nb-big{font:600 28px/1 var(--mono);font-variant-numeric:tabular-nums}
+.nb-dir{font:600 16px var(--sans);color:var(--muted);min-width:2.2em}
+.nb-cell{display:flex;flex-direction:column;font-size:13px;font-variant-numeric:tabular-nums}
+.nb-cell b{font:600 20px var(--mono)}
+.nb-k{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.nb-pos{font:11px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+@media (max-width:760px){.navbar{top:54px;gap:10px;padding:5px 10px;max-width:calc(100% - 70px)}.nb-big{font-size:24px}}
+.sosbtn{position:fixed;left:calc((100% - 360px) / 2);transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:1500;font:700 15px var(--sans);letter-spacing:.05em;text-transform:uppercase;padding:9px 22px;border:2px solid #fff;border-radius:5px;background:#c1121f;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+@media (max-width:760px){.sosbtn{left:50%}.locbtn{top:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px))}}
+.sos{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(12px,env(safe-area-inset-top,0px)) 12px 24px}
+.sos-card{background:var(--panel);color:var(--fg);width:min(560px,100%);border-radius:8px;border-top:6px solid #c1121f;padding:14px 16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.sos-top{display:flex;justify-content:space-between;align-items:center}.sos-top h2{margin:0;font-size:20px;color:#c1121f;text-transform:none;letter-spacing:0}
+.sos-x{font:inherit;padding:6px 12px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);cursor:pointer}
+.sos-pos .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.sos-pos .big{font:600 22px/1.3 var(--mono);font-variant-numeric:tabular-nums}.sos-pos .near{font-size:13px;color:var(--muted)}
+.sos-calls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.call{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10px 6px;border-radius:6px;background:#c1121f;color:#fff;text-decoration:none;font:700 16px var(--sans)}
+.call small{font:400 11px var(--sans);opacity:.9}.call.vhf{background:var(--bg);color:var(--fg);border:1px solid var(--line)}
+.sos-set{font-size:13px}.sos-set summary{cursor:pointer;color:var(--pin)}.sos-set label,.sos-what{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);margin-top:8px}
+.sos-set input,.sos-what select{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+.sos-script .tabs{display:flex;gap:6px;flex-wrap:wrap}.sos-script .tabs button{font:600 12px var(--sans);padding:6px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);cursor:pointer}
+.sos-script .tabs button[aria-pressed="true"]{background:#c1121f;border-color:#c1121f;color:#fff}
+#sos-lines{margin:10px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-size:16px;line-height:1.4}
+#sos-lines b{font-weight:700}#sos-lines .fill{background:rgba(214,51,108,.12);padding:0 3px;border-radius:2px}
+@media (max-width:480px){.sos-calls{grid-template-columns:1fr 1fr}.call.vhf{grid-column:1/-1}}
+.sos-pref{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.call.pref{background:#0b5d8a}
+.call.pref.off{background:var(--bg);color:var(--muted);border:1px dashed var(--line)}
+.sos-pref .plan{grid-column:1/-1;background:#2f6f4f}
+.nb-trip{flex-basis:100%;text-align:center;font-size:12px;font-variant-numeric:tabular-nums;border-top:1px solid var(--line);padding-top:4px}
+.nb-trip.late{color:var(--bad);font-weight:700}
+.acct{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:12px}
+.gbtn{font:600 13px var(--sans);padding:6px 12px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--fg);cursor:pointer}
+.acct-who{color:var(--muted)}
+.linkbtn{font:inherit;font-size:12px;background:none;border:0;color:var(--pin);cursor:pointer;padding:0;text-decoration:underline}
+.sos-card.pan{border-top-color:#e8890c}
+.sos-tabs .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sos-tabs .tabs button{font:700 14px var(--sans);padding:10px 6px;border:2px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer;line-height:1.25}
+#t-may[aria-pressed="true"]{background:#c1121f;border-color:#c1121f;color:#fff}
+#t-pan[aria-pressed="true"]{background:#e8890c;border-color:#e8890c;color:#1a1200}
+.sos-when{margin:0;padding:8px 10px;border-radius:4px;font-size:13px;line-height:1.4;background:rgba(193,18,31,.1);border-left:4px solid #c1121f}
+.sos-card.pan .sos-when{background:rgba(232,137,12,.12);border-left-color:#e8890c}
+.sos-card.pan #sos-lines b{color:#b86400}
+#sos-lines b{color:#c1121f}
+.sos-other{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;margin-top:4px}
+.legendbox{position:absolute;right:10px;top:10px;z-index:500;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px;display:flex;flex-direction:column;gap:4px;max-height:calc(100% - 60px);overflow:auto}
+.mapwrap:has(.navbar:not([hidden])) .legendbox{top:124px}
+@media (max-width:760px){.mapwrap:has(.navbar:not([hidden])) .legendbox{top:150px}}
+.legendbox b{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.legendbox img{display:block;background:#fff;border-radius:2px}
+#leg-wind img{height:220px;width:auto}
+#leg-depth img{width:240px;height:auto;max-width:100%}
+.readout{position:absolute;left:10px;bottom:24px;z-index:500;background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:4px;font:12px var(--mono);font-variant-numeric:tabular-nums;max-width:calc(100% - 20px)}
+.file input{font:inherit;font-size:12px;max-width:100%}
+a{color:var(--pin)}
+:focus-visible{outline:2px solid var(--pin);outline-offset:2px}
+.leaflet-container{font-family:var(--sans)}
+.leaflet-popup-content{margin:10px 12px;line-height:1.45;font-size:13px}
+.lbl{background:transparent;border:0;box-shadow:none;color:#0d1b24;font-weight:600;font-size:12px;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
+.lbl::before{display:none}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:65vh auto;height:auto}
+  aside{border-left:0;border-top:1px solid var(--line);overflow:visible}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="mapwrap"><div id="map"></div><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind · knots</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar" hidden><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="locbtn" id="locbtn" aria-pressed="false">My location</button><div class="readout" id="readout">Tap the water for wind and waves at that spot</div></div>
+  <aside>
+    <div>
+      <div class="acct" id="acct" hidden><button type="button" class="gbtn" id="gsign">Sign in with Google</button><span class="acct-who" id="acct-who"></span><button type="button" class="linkbtn" id="gout" hidden>Sign out</button></div>
+      <h1>Strait of Georgia Marine Map</h1>
+      <p class="sub">Sand Heads to Gambier Island · Baynes Sound to Reed Point</p>
+    </div>
+
+    <section>
+      <h2>Base map</h2>
+      <div class="seg" id="basemaps"></div>
+      <p class="note" style="margin-top:6px">Depth contours use Canadian Hydrographic Service survey depths, coloured in bands from red (shallow) to blue (deep). Satellite zooms to about 100 ft on the scale bar.</p>
+    </section>
+
+    <section>
+      <h2>Overlays</h2>
+      <div id="overlays"></div>
+    </section>
+
+    <section>
+      <h2>VHF channels</h2>
+      <div class="rows vhf">
+        <div class="vr em"><b>16</b><span>Distress, safety and calling · <i>*16</i> on a cell phone</span></div>
+        <div class="vr"><b>83A</b><span>Coast Guard working channel</span></div>
+        <div class="vr"><b>12</b><span>Vessel Traffic: Vancouver Harbour, English Bay, Howe Sound</span></div>
+        <div class="vr"><b>11</b><span>Vessel Traffic: Strait of Georgia south of Ballenas Is., Gulf Islands</span></div>
+        <div class="vr"><b>71</b><span>Vessel Traffic: north of Ballenas Is. (Baynes Sound side)</span></div>
+        <div class="vr"><b>74</b><span>Vessel Traffic: Fraser River from Sand Heads</span></div>
+        <div class="vr"><b>06</b><span>Fraser River North Arm</span></div>
+        <div class="vr wx"><b>WX3</b><span>Weather broadcast · Bowen Island transmitter</span></div>
+        <div class="vr wx"><b>WX1</b><span>Weather broadcast · Texada Island transmitter</span></div>
+        <div class="vr wx"><b>21B</b><span>Weather broadcast · Mount Parke, Mayne Island</span></div>
+      </div>
+      <p class="note" style="margin-top:6px">Check the Coast Guard's Radio Aids to Marine Navigation before relying on these.</p>
+    </section>
+
+
+    <section class="time">
+      <h2>Forecast time (wind and waves)</h2>
+      <div class="seg" id="ranges"><button type="button" data-h="24" aria-pressed="true">24 h</button><button type="button" data-h="168" aria-pressed="false">7 days</button><button type="button" data-h="336" aria-pressed="false">14 days</button></div>
+      <div class="seg steps" id="steps"><button type="button" data-step="-24" aria-label="Back 1 day">&laquo; −1 d</button><button type="button" data-step="-1" aria-label="Back 1 step">&lsaquo; −1 h</button><button type="button" data-step="0" aria-label="Back to now">Now</button><button type="button" data-step="1" aria-label="Forward 1 step">+1 h &rsaquo;</button><button type="button" data-step="24" aria-label="Forward 1 day">+1 d &raquo;</button></div>
+      <input type="range" id="fhour" min="0" max="24" step="1" value="0" aria-label="Forecast hours from now">
+      <output id="ftime">Now</output>
+      <p id="fmodel" class="model"></p>
+      <div id="daylight" class="time">
+        <p class="dlhead" id="dltitle">Daylight hours · tap an hour</p>
+        <label class="note" for="dlspot">Wind shown for</label>
+        <select id="dlspot" class="dlsel"></select>
+        <div id="dltable"><p class="note">Loading…</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Marine forecast · Environment Canada</h2>
+      <div id="marine"><p class="note">Loading the official marine forecast…</p></div>
+    </section>
+
+    <section>
+      <h2>Tides · next 48 hours</h2>
+      <p class="note">Numbers = tide height in metres at each high and low · shaded = night · orange dashes = sunrise and sunset · grey line = midnight · red = now</p>
+      <div id="tides"><p class="note">Loading tide predictions…</p></div>
+    </section>
+
+    <section class="file">
+      <h2>Add DFO zones from a file</h2>
+      <label for="dfofile" class="note">Load Rockfish Conservation Areas or any closure boundary saved as GeoJSON.</label>
+      <input type="file" id="dfofile" accept=".geojson,.json">
+      <p class="note" id="dfostatus"></p>
+    </section>
+
+    <section>
+      <h2>Check before you go</h2>
+      <p class="note"><a href="https://www-ops2.pac.dfo-mpo.gc.ca/fns-sap/index-eng.cfm" target="_blank" rel="noopener">DFO fishery notices</a> for openings and closures ·
+      <a href="https://www.pac.dfo-mpo.gc.ca/fm-gp/maps-cartes/rca-acs/index-eng.html" target="_blank" rel="noopener">Rockfish Conservation Area maps</a> ·
+      <a href="https://weather.gc.ca/marine/region_e.html?mapID=02" target="_blank" rel="noopener">Environment Canada marine forecast</a></p>
+      <p class="note" style="margin-top:8px">Planning aid only. Not for navigation; use CHS charts.</p>
+    </section>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ================= SETTINGS: edit these if a layer shows "failed" ================= */
+const CONFIG = {
+  // Environment Canada GeoMet weather map service. The first name that exists is used.
+  geomet: 'https://geo.weather.gc.ca/geomet',
+  // Wind models, used in order: the first one whose forecast reaches the chosen time
+  windModels: [
+    {label:'High-res model, 2.5 km', speed:'HRDPS.CONTINENTAL_WSPD', dir:'HRDPS.CONTINENTAL_WD'},
+    {label:'Global model, 15 km',    speed:'GDPS_15km_WindSpeed_10m', dir:'GDPS_15km_WindDir_10m'},
+    {label:'Ensemble average, speed only (no arrows)', speed:'GEPS.DIAG.3_WSPD.ERMEAN', dir:null}
+  ],
+  // Wind arrows are drawn as thin lines from the raw forecast grid (direction + speed)
+  arrowArea: {south:49.0, west:-125.0, north:49.65, east:-122.75},
+  arrowSpacingPx: 42,
+  waveLayers:  ['GDWPS_25km_HTSGW_PT1H', 'GDWPS_25km_HTSGW_PT3H'],   // wave height (coarse 25 km model)
+  // DFO map services (ArcGIS). Draws every layer in each service.
+  dfoServices: [
+    {name:'DFO marine refuges and fishing closures', url:'https://egisp.dfo-mpo.gc.ca/arcgis/rest/services/open_data_donnees_ouvertes/other_effective_area_based_conservation_measures/MapServer'},
+    {name:'DFO sponge reef closures', url:'https://egisp.dfo-mpo.gc.ca/arcgis/rest/services/open_data_donnees_ouvertes/sponge_reef_areas_of_the_pacific_region/MapServer'}
+  ],
+  // Canadian Hydrographic Service depth survey (10 m grid)
+  nonna: 'https://nonna-geoserver.data.chs-shc.ca/geoserver/wms',
+  nonnaLayer: 'nonna:NONNA 10',
+  // Canadian Hydrographic Service tide stations
+  iwls: 'https://api-iwls.dfo-mpo.gc.ca/api/v1',
+  tideStations: [
+    {code:'07795', name:'Point Atkinson', near:'Bowen · Howe Sound'},
+    {code:'07917', name:'Nanaimo',        near:'Gabriola · Thrasher Rock'}
+  ],
+  tz: 'America/Vancouver',
+  // Google sign-in: paste your Firebase web app config here (Firebase console > Project settings > Your apps)
+  firebase: {
+    apiKey: "AIzaSyATqbKPLEwK3ax_CGc2JAY-kR2PFDNI4W4",
+    authDomain: "strait-marine-map.firebaseapp.com",
+    projectId: "strait-marine-map",
+    storageBucket: "strait-marine-map.firebasestorage.app",
+    messagingSenderId: "966025707562",
+    appId: "1:966025707562:web:27143c6ecaeef1dd8e4353"
+  },
+  // Live ships from the AIS helper program running on this computer (run-ais-helper.bat)
+  aisFeed: 'http://127.0.0.1:8765/vessels',
+  // Coast Guard / DFO ships: names starting CCGS, or MMSI numbers you add here
+  govNames: /^(CCGS|C\.C\.G\.S|CCG\b|CG\s|DFO\b|CANADIAN COAST GUARD)/i,
+  govMmsi: []
+};
+/* ================================================================================== */
+
+// Map area: Sand Heads (S) to Gambier Island (N), Baynes Sound (W) to Reed Point, Port Moody (E)
+const AREA = L.latLngBounds([[49.09, -124.90], [49.57, -122.84]]);
+const map = L.map('map', {zoomSnap:0.5, maxZoom:20, maxBounds:AREA.pad(0.08), maxBoundsViscosity:1.0});
+map.fitBounds(AREA);
+map.setMinZoom(map.getBoundsZoom(AREA.pad(0.08)));
+window.addEventListener('load', () => map.invalidateSize());
+L.control.scale({imperial:true, metric:true, maxWidth:160}).addTo(map);
+
+// ---------- Base maps ----------
+map.createPane('base').style.zIndex = 150;   // base maps always sit under the overlays
+const esri = p => `https://server.arcgisonline.com/ArcGIS/rest/services/${p}/MapServer/tile/{z}/{y}/{x}`;
+const bases = {
+  'Ocean depth': L.layerGroup([
+    L.tileLayer(esri('Ocean/World_Ocean_Base'), {maxNativeZoom:13, maxZoom:20, pane:'base', attribution:'Esri, GEBCO, NOAA, CHS'}),
+    L.tileLayer(esri('Ocean/World_Ocean_Reference'), {maxNativeZoom:13, maxZoom:20, pane:'base'})
+  ]),
+  'Depth contours': L.layerGroup([
+    L.tileLayer(esri('Ocean/World_Ocean_Base'), {maxNativeZoom:13, maxZoom:20, pane:'base', attribution:'Esri'}),
+    L.tileLayer.wms(CONFIG.nonna, {layers:CONFIG.nonnaLayer, styles:'raster', format:'image/png', transparent:true, version:'1.3.0', maxZoom:20, pane:'base', opacity:0.85, attribution:'Canadian Hydrographic Service'}),
+    L.tileLayer(esri('Ocean/World_Ocean_Reference'), {maxNativeZoom:13, maxZoom:20, pane:'base'})
+  ]),
+  'Satellite': L.tileLayer(esri('World_Imagery'), {maxNativeZoom:19, maxZoom:20, pane:'base', attribution:'Esri, Maxar'})
+};
+let currentBase = bases['Ocean depth'].addTo(map);
+const bm = document.getElementById('basemaps');
+Object.keys(bases).forEach((k,i) => {
+  const b = document.createElement('button'); b.textContent = k; b.setAttribute('aria-pressed', i===0);
+  b.onclick = () => { map.removeLayer(currentBase); currentBase = bases[k].addTo(map); currentBase.bringToBack?.();
+    bm.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x===b)); updateLegends(); };
+  bm.appendChild(b);
+});
+
+// ---------- Overlay registry with status ----------
+const ovl = document.getElementById('overlays');
+function addOverlay(id, title, sub, layer, on=true){
+  const row = document.createElement('label'); row.className='lyr';
+  row.innerHTML = `<input type="checkbox" id="o-${id}" ${on?'checked':''}><span>${title}<small>${sub}</small></span><span class="st wait" id="s-${id}">loading</span>`;
+  ovl.appendChild(row);
+  if (on) layer.addTo(map);
+  row.querySelector('input').onchange = e => e.target.checked ? layer.addTo(map) : map.removeLayer(layer);
+  return (cls, text) => { const s=document.getElementById('s-'+id); s.className='st '+cls; s.textContent=text; };
+}
+// Mark a tile layer's status from tile load results
+function watchTiles(layer, setStatus){
+  let ok=0, bad=0;
+  layer.on('tileload', () => { ok++; setStatus('ok','live'); });
+  layer.on('tileerror', () => { bad++; if(!ok) setStatus('bad','failed'); });
+}
+
+// Nautical marks
+const seamarks = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {maxNativeZoom:18, maxZoom:20, attribution:'OpenSeaMap'});
+watchTiles(seamarks, addOverlay('sea','Nautical marks','Buoys, lights, beacons (OpenSeaMap)', seamarks));
+
+// ---------- Environment Canada wind and waves (WMS) ----------
+async function pickLayer(candidates){
+  for (const name of candidates){
+    try {
+      const r = await fetch(`${CONFIG.geomet}?service=WMS&version=1.3.0&request=GetCapabilities&layer=${encodeURIComponent(name)}`);
+      const t = await r.text();
+      if (t.includes(`<Name>${name}</Name>`)) {
+        const m = t.match(/<Dimension name="time"[^>]*>([^<]+)<\/Dimension>/);
+        return {name, time: m ? m[1].trim() : null};
+      }
+    } catch(e){ return {name:candidates[0], time:null, unchecked:true}; }   // capabilities blocked: try first name
+  }
+  return null;
+}
+function wms(name, opacity, styles='', sharpen=1){
+  const l = L.tileLayer.wms(CONFIG.geomet, {layers:name, styles, format:'image/png', transparent:true, version:'1.3.0', opacity, maxZoom:20, attribution:'Environment Canada'});
+  // Ask for a sharper image and shrink it into each tile: symbols come out narrower
+  l.wmsParams.width = l.wmsParams.height = Math.round(256 * sharpen);
+  return l;
+}
+const wx = {};   // key -> {layer, name, time}
+async function setupWx(key, title, sub, candidates, opacity, on, styles='', sharpen=1){
+  const placeholder = L.layerGroup();
+  const setStatus = addOverlay(key, title, sub, placeholder, on);
+  const found = await pickLayer(candidates);
+  if (!found){ setStatus('bad','not found'); return; }
+  const layer = wms(found.name, opacity, found.unchecked || found.name===candidates[0] ? styles : '', sharpen);
+  wx[key] = {layer, name:found.name, time:found.time};
+  placeholder.addLayer(layer);
+  watchTiles(layer, setStatus);
+  if (found.unchecked) setStatus('warn','unchecked');
+  applyTime();
+}
+
+// Forecast time slider
+const fhour = document.getElementById('fhour'), ftime = document.getElementById('ftime');
+const fmt = (d, opts) => d.toLocaleString('en-CA', {timeZone:CONFIG.tz, ...opts});
+function parseRange(dim){ // "start/end/PT1H" or comma list
+  if (!dim) return null;
+  const first = dim.split(',')[0].split('/');
+  const last = dim.split(',').pop().split('/');
+  return {start:new Date(first[0]), end:new Date(last[1] || last[0])};
+}
+const snap3 = t => new Date(Math.round(t.getTime() / 10800e3) * 10800e3);
+function applyTime(){
+  const base = new Date(); base.setUTCMinutes(0,0,0);
+  const t = new Date(base.getTime() + (+fhour.value)*3600e3);
+  const hrs = +fhour.value, ahead = hrs === 0 ? 'Now' : hrs < 48 ? `+${hrs} h` : `+${Math.floor(hrs/24)} d ${hrs%24 ? hrs%24 + ' h' : ''}`.trim();
+  ftime.textContent = `${ahead} · ` + fmt(t,{weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+  const model = modelFor(t);
+  document.getElementById('fmodel').textContent = 'Wind model: ' + model.label + (wx.wave && map.hasLayer(wx.wave.layer) ? ' · Waves: global 25 km model' : '');
+  if (wx.wind && wx.wind.name !== model.speed){
+    wx.wind.name = model.speed; wx.wind.time = model.time;
+    wx.wind.layer.setParams({layers:model.speed}, true);
+    updateLegends();
+  }
+  // Longer-range models only have 3-hourly steps after day 3: snap to 00/03/06… UTC
+  const tq = model === CONFIG.windModels[0] ? t : snap3(t);
+  loadArrows(tq.toISOString().replace('.000',''), model);
+  Object.values(wx).forEach(w => {
+    let use = tq; const r = parseRange(w.time);
+    if (r && !isNaN(r.start)) { if (use < r.start) use = r.start; if (use > r.end) use = r.end; }
+    w.layer.setParams({TIME: use.toISOString().replace('.000','')});
+  });
+}
+fhour.addEventListener('input', applyTime);
+function stepLabels(){
+  const st = +fhour.step, b = document.querySelectorAll('#steps button');
+  b[1].innerHTML = `&lsaquo; −${st} h`; b[3].innerHTML = `+${st} h &rsaquo;`;
+}
+document.querySelectorAll('#steps button').forEach(b => b.addEventListener('click', () => {
+  const k = +b.dataset.step, st = +fhour.step;
+  let v = k === 0 ? 0 : +fhour.value + (Math.abs(k) === 1 ? k * st : k);
+  v = Math.max(0, Math.min(+fhour.max, Math.round(v / st) * st));
+  fhour.value = v; applyTime(); markSelected();
+}));
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,textarea,select')) return;
+  const map_ = {ArrowLeft:1, ArrowRight:3};
+  if (e.key in map_ && !e.target.closest('#map')){ document.querySelectorAll('#steps button')[map_[e.key]].click(); e.preventDefault(); }
+});
+document.querySelectorAll('#ranges button').forEach(b => b.addEventListener('click', () => {
+  const h = +b.dataset.h;
+  fhour.max = h; fhour.step = h > 48 ? 3 : 1;
+  if (+fhour.value > h) fhour.value = h;
+  fhour.value = Math.round(+fhour.value / +fhour.step) * +fhour.step;
+  document.querySelectorAll('#ranges button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  stepLabels(); applyTime();
+}));
+
+setupWx('wind',  'Wind speed',  'Colour by knots, Environment Canada', [CONFIG.windModels[0].speed], 0.3, true, 'WINDSPEEDKNOTS-LINEAR');
+// Forecast reach of each wind model
+Promise.all(CONFIG.windModels.map(async m => {
+  try { const t = await (await fetch(`${CONFIG.geomet}?service=WMS&version=1.3.0&request=GetCapabilities&layer=${m.speed}`)).text();
+    const d = t.match(/<Dimension name="time"[^>]*>([^<]+)<\/Dimension>/); m.time = d ? d[1].trim() : null; m.range = parseRange(m.time); } catch(e){}
+})).then(applyTime);
+function modelFor(t){
+  const ms = CONFIG.windModels;
+  if (!ms.some(m => m.range)) return ms[0];          // ranges not loaded yet
+  return ms.find(m => m.range && t >= m.range.start && t <= m.range.end) || (t < (ms[0].range?.start || 0) ? ms[0] : ms[ms.length - 1]);
+}
+
+// ---------- Thin line wind arrows ----------
+const arrowLayer = L.layerGroup();
+const setArrowStatus = addOverlay('arrow', 'Wind arrows', 'Thin lines; longer line = stronger wind', arrowLayer);
+const arrowRenderer = L.canvas({padding:0.2});
+let arrowGrid = null, arrowTime = null;
+// Coarse land outline (Natural Earth) so arrows only draw over water: [polygon][ring][[lon,lat]]
+const LAND = [[[[-123.676,48.971],[-123.678,48.976],[-123.693,48.984],[-123.701,48.996],[-123.707,49.012],[-123.704,49.017],[-123.693,49.013],[-123.686,49.019],[-123.68,49.018],[-123.657,48.997],[-123.656,48.987],[-123.672,48.984],[-123.674,48.981],[-123.671,48.971],[-123.676,48.971]]],[[[-123.706,49.133],[-123.75,49.129],[-123.843,49.151],[-123.862,49.164],[-123.867,49.174],[-123.866,49.179],[-123.87,49.185],[-123.87,49.19],[-123.863,49.196],[-123.834,49.201],[-123.824,49.199],[-123.809,49.184],[-123.769,49.169],[-123.704,49.156],[-123.697,49.148],[-123.697,49.137],[-123.706,49.133]]],[[[-124.847,49.02],[-124.819,49.058],[-124.808,49.099],[-124.801,49.117],[-124.787,49.133],[-124.779,49.152],[-124.799,49.189],[-124.808,49.247],[-124.821,49.238],[-124.829,49.225],[-124.822,49.181],[-124.822,49.14],[-124.828,49.12],[-124.87,49.075],[-124.879,49.032],[-124.888,49.014],[-124.968,48.988],[-124.993,48.986],[-125.05,48.992],[-125.05,49.7],[-124.871,49.7],[-124.876,49.677],[-124.891,49.672],[-124.973,49.685],[-124.98,49.682],[-124.976,49.668],[-124.949,49.654],[-124.918,49.631],[-124.838,49.517],[-124.808,49.507],[-124.795,49.473],[-124.773,49.461],[-124.724,49.465],[-124.692,49.449],[-124.658,49.438],[-124.637,49.411],[-124.596,49.391],[-124.545,49.377],[-124.445,49.363],[-124.387,49.361],[-124.36,49.357],[-124.32,49.335],[-124.208,49.308],[-124.175,49.315],[-124.159,49.31],[-124.109,49.28],[-124.127,49.274],[-124.163,49.272],[-124.178,49.26],[-124.165,49.255],[-124.123,49.26],[-124.071,49.247],[-124.009,49.246],[-123.978,49.241],[-123.955,49.229],[-123.946,49.215],[-123.946,49.208],[-123.964,49.203],[-123.951,49.185],[-123.931,49.144],[-123.917,49.135],[-123.884,49.137],[-123.842,49.128],[-123.828,49.13],[-123.813,49.119],[-123.787,49.069],[-123.757,49.042],[-123.751,49.028],[-123.774,49.021],[-123.761,48.996],[-123.765,48.988],[-123.78,48.986],[-123.794,48.993],[-123.804,49.005],[-123.816,49.013],[-123.835,49.006],[-123.835,49.0],[-123.787,48.965],[-123.755,48.95],[-124.992,48.95],[-124.984,48.956],[-124.963,48.963],[-124.918,48.972],[-124.883,48.991],[-124.847,49.02]]],[[[-124.258,49.456],[-124.297,49.458],[-124.352,49.475],[-124.361,49.48],[-124.356,49.49],[-124.365,49.497],[-124.377,49.5],[-124.379,49.507],[-124.365,49.521],[-124.355,49.522],[-124.329,49.513],[-124.296,49.512],[-124.251,49.504],[-124.232,49.499],[-124.172,49.464],[-124.172,49.455],[-124.186,49.447],[-124.232,49.459],[-124.258,49.456]]],[[[-123.963,49.462],[-123.974,49.468],[-123.98,49.476],[-123.981,49.484],[-123.987,49.486],[-123.982,49.493],[-123.985,49.504],[-123.983,49.51],[-123.974,49.507],[-123.955,49.491],[-123.952,49.468],[-123.963,49.462]]],[[[-124.643,49.504],[-124.653,49.496],[-124.663,49.494],[-124.672,49.497],[-124.704,49.521],[-124.703,49.538],[-124.684,49.549],[-124.655,49.547],[-124.607,49.531],[-124.594,49.522],[-124.625,49.523],[-124.636,49.517],[-124.643,49.504]]],[[[-124.746,49.488],[-124.825,49.54],[-124.839,49.557],[-124.84,49.578],[-124.836,49.598],[-124.827,49.603],[-124.792,49.58],[-124.716,49.499],[-124.694,49.491],[-124.691,49.483],[-124.71,49.48],[-124.746,49.488]]],[[[-124.282,49.628],[-124.27,49.616],[-124.173,49.554],[-124.144,49.53],[-124.123,49.5],[-124.143,49.489],[-124.162,49.496],[-124.198,49.521],[-124.378,49.603],[-124.439,49.612],[-124.442,49.617],[-124.439,49.631],[-124.462,49.654],[-124.473,49.672],[-124.493,49.672],[-124.517,49.685],[-124.534,49.69],[-124.555,49.7],[-124.344,49.7],[-124.323,49.671],[-124.294,49.65],[-124.282,49.628]]],[[[-123.841,49.7],[-123.548,49.7],[-123.664,49.656],[-123.795,49.644],[-123.808,49.647],[-123.812,49.667],[-123.823,49.683],[-123.841,49.7]]],[[[-124.109,49.678],[-124.136,49.657],[-124.164,49.66],[-124.188,49.679],[-124.202,49.7],[-124.098,49.7],[-124.109,49.678]]],[[[-123.593,48.95],[-123.595,48.95],[-123.596,48.952],[-123.593,48.95]]],[[[-123.657,48.95],[-123.661,48.968],[-123.668,48.975],[-123.666,48.98],[-123.66,48.984],[-123.639,48.98],[-123.632,48.95],[-123.657,48.95]]],[[[-123.659,49.073],[-123.57,48.992],[-123.547,48.976],[-123.495,48.95],[-123.541,48.95],[-123.633,49.024],[-123.654,49.034],[-123.698,49.082],[-123.703,49.1],[-123.697,49.109],[-123.687,49.109],[-123.659,49.073]]],[[[-122.732,48.959],[-122.76,49.001],[-122.782,49.017],[-122.823,49.007],[-122.853,49.017],[-122.876,49.037],[-122.876,49.055],[-122.865,49.07],[-122.868,49.08],[-122.882,49.086],[-122.907,49.088],[-122.951,49.083],[-123.033,49.051],[-123.049,49.035],[-123.044,49.017],[-123.032,48.995],[-123.045,48.984],[-123.088,48.972],[-123.089,48.988],[-123.1,49.021],[-123.108,49.034],[-123.139,49.054],[-123.143,49.061],[-123.129,49.075],[-123.076,49.106],[-123.054,49.123],[-123.041,49.151],[-123.081,49.128],[-123.123,49.116],[-123.167,49.116],[-123.212,49.13],[-123.212,49.137],[-123.2,49.149],[-123.205,49.19],[-123.198,49.206],[-123.18,49.21],[-123.157,49.205],[-123.138,49.196],[-123.143,49.207],[-123.236,49.25],[-123.247,49.275],[-123.218,49.279],[-123.175,49.277],[-123.143,49.28],[-123.162,49.3],[-123.155,49.309],[-123.139,49.309],[-123.129,49.305],[-123.123,49.294],[-123.109,49.289],[-123.09,49.289],[-123.074,49.294],[-123.067,49.288],[-123.057,49.294],[-123.039,49.296],[-123.021,49.293],[-123.007,49.288],[-122.961,49.282],[-122.922,49.3],[-122.892,49.334],[-122.863,49.406],[-122.856,49.442],[-122.86,49.45],[-122.869,49.456],[-122.878,49.457],[-122.882,49.449],[-122.88,49.417],[-122.882,49.404],[-122.938,49.326],[-123.021,49.307],[-123.212,49.343],[-123.228,49.343],[-123.27,49.335],[-123.284,49.363],[-123.294,49.37],[-123.284,49.383],[-123.256,49.397],[-123.245,49.411],[-123.241,49.426],[-123.24,49.442],[-123.252,49.512],[-123.251,49.523],[-123.24,49.555],[-123.218,49.596],[-123.225,49.597],[-123.226,49.603],[-123.215,49.61],[-123.207,49.622],[-123.205,49.636],[-123.212,49.65],[-123.17,49.675],[-123.154,49.693],[-123.164,49.7],[-122.7,49.7],[-122.7,48.95],[-122.813,48.95],[-122.801,48.962],[-122.777,48.965],[-122.732,48.959]]],[[[-123.385,49.336],[-123.426,49.34],[-123.429,49.347],[-123.426,49.367],[-123.418,49.381],[-123.37,49.411],[-123.326,49.42],[-123.315,49.413],[-123.319,49.399],[-123.33,49.384],[-123.33,49.382],[-123.327,49.381],[-123.331,49.373],[-123.344,49.356],[-123.359,49.343],[-123.385,49.336]]],[[[-123.475,49.392],[-123.5,49.382],[-123.496,49.39],[-123.464,49.412],[-123.438,49.406],[-123.434,49.398],[-123.438,49.393],[-123.45,49.391],[-123.475,49.392]]],[[[-123.453,49.508],[-123.44,49.521],[-123.418,49.531],[-123.373,49.542],[-123.362,49.541],[-123.342,49.507],[-123.322,49.486],[-123.324,49.462],[-123.343,49.443],[-123.376,49.438],[-123.367,49.454],[-123.375,49.464],[-123.389,49.467],[-123.404,49.466],[-123.433,49.446],[-123.452,49.445],[-123.449,49.459],[-123.457,49.478],[-123.445,49.486],[-123.445,49.494],[-123.453,49.508]]],[[[-123.228,49.675],[-123.253,49.65],[-123.245,49.613],[-123.249,49.598],[-123.256,49.593],[-123.267,49.591],[-123.287,49.581],[-123.328,49.582],[-123.355,49.555],[-123.397,49.558],[-123.41,49.548],[-123.489,49.515],[-123.503,49.505],[-123.486,49.494],[-123.491,49.473],[-123.473,49.435],[-123.482,49.414],[-123.5,49.4],[-123.516,49.392],[-123.534,49.388],[-123.555,49.39],[-123.781,49.465],[-123.807,49.471],[-123.865,49.473],[-123.886,49.477],[-123.903,49.486],[-123.92,49.507],[-123.931,49.513],[-123.964,49.521],[-123.975,49.531],[-123.993,49.55],[-124.027,49.603],[-124.061,49.631],[-124.066,49.644],[-124.068,49.662],[-124.064,49.678],[-124.044,49.691],[-124.04,49.7],[-123.902,49.7],[-123.869,49.672],[-123.835,49.634],[-123.827,49.595],[-123.828,49.582],[-123.805,49.529],[-123.794,49.513],[-123.777,49.505],[-123.767,49.513],[-123.753,49.541],[-123.772,49.575],[-123.772,49.594],[-123.76,49.61],[-123.718,49.617],[-123.694,49.635],[-123.638,49.641],[-123.59,49.654],[-123.55,49.675],[-123.536,49.7],[-123.178,49.7],[-123.203,49.682],[-123.228,49.675]]]];
+function inRing(x, y, ring){ let inside = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++){ const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside; } return inside; }
+function onLand(lat, lon){ return LAND.some(poly => inRing(lon, lat, poly[0]) && !poly.slice(1).some(hole => inRing(lon, lat, hole))); }
+let landMask = null;   // cached per grid shape
+
+async function fetchGrid(cov, time, area){
+  const a = area || CONFIG.arrowArea;
+  const u = `${CONFIG.geomet}?service=WCS&version=2.0.1&request=GetCoverage&coverageid=${cov}&subsettingcrs=EPSG:4326&subset=lat(${a.south},${a.north})&subset=lon(${a.west},${a.east})&format=image/x-aaigrid&time=${time}`;
+  const t = await (await fetch(u)).text();
+  const lines = t.slice(t.indexOf('ncols')).split('--wcs')[0].trim().split('\n');
+  const h = {}; let k = 0;
+  for (; k < lines.length; k++){ const m = lines[k].trim().match(/^([a-zA-Z_]+)\s+(\S+)$/); if (!m) break; h[m[1].toLowerCase()] = +m[2]; }
+  const rows = lines.slice(k).map(l => l.trim().split(/\s+/).map(Number));
+  if (h.cellsize) h.dx = h.dy = h.cellsize;
+  if (!h.ncols || rows.length !== h.nrows) throw new Error('bad grid');
+  return {h, rows};
+}
+async function loadArrows(time, model){
+  const key = time + model.speed;
+  if (key === arrowTime && arrowGrid) return;
+  arrowTime = key;
+  if (!model.dir){ arrowGrid = null; arrowLayer.clearLayers(); setArrowStatus('warn','no direction'); return; }
+  try {
+    const [dir, spd] = await Promise.all([fetchGrid(model.dir, time), fetchGrid(model.speed, time)]);
+    if (key !== arrowTime) return;           // a newer request replaced this one
+    arrowGrid = {h:dir.h, dir:dir.rows, spd:spd.rows};
+    setArrowStatus('ok','live'); drawArrows();
+  } catch(e){ setArrowStatus(arrowGrid ? 'warn' : 'bad', arrowGrid ? 'old time' : 'failed'); }
+}
+function drawArrows(){
+  arrowLayer.clearLayers();
+  if (!arrowGrid || !map.hasLayer(arrowLayer)) return;
+  const {h, dir, spd} = arrowGrid;
+  const maskKey = `${h.ncols}x${h.nrows}x${h.xllcorner}`;
+  if (!landMask || landMask.key !== maskKey) landMask = Array.from({length:h.nrows}, (_, r) => Array.from({length:h.ncols}, (_, c) => onLand(h.yllcorner + (h.nrows - r - 0.5) * h.dy, h.xllcorner + (c + 0.5) * h.dx)));
+  landMask.key = maskKey;
+  const z = map.getZoom();
+  const p0 = map.project([49, -123.6], z), p1 = map.project([49, -123.6 + h.dx], z);
+  const step = Math.max(1, Math.ceil(CONFIG.arrowSpacingPx / Math.max(1, p1.x - p0.x)));
+  const b = map.getBounds().pad(0.1), segs = [];
+  for (let r = 0; r < h.nrows; r += step){
+    for (let c = 0; c < h.ncols; c += step){
+      const lat = h.yllcorner + (h.nrows - r - 0.5) * h.dy, lon = h.xllcorner + (c + 0.5) * h.dx;
+      if (!b.contains([lat, lon])) continue;
+      if (landMask[r][c]) continue;
+      const d = dir[r][c], s = spd[r][c];
+      if (!(d >= 0 && d <= 360) || !(s >= 0)) continue;
+      const kn = s * 1.94384;
+      const len = 14 + Math.min(kn, 30) * 0.6;                 // 14 px calm, up to 32 px at 30+ kn
+      const to = (d + 180) * Math.PI / 180;                    // direction the wind blows toward
+      const ux = Math.sin(to), uy = -Math.cos(to);
+      const ctr = map.latLngToLayerPoint([lat, lon]);
+      const tail = ctr.subtract(L.point(ux, uy).multiplyBy(len/2)), head = ctr.add(L.point(ux, uy).multiplyBy(len/2));
+      const wing = a => head.subtract(L.point(Math.sin(to + a), -Math.cos(to + a)).multiplyBy(5));
+      const ll = pt => map.layerPointToLatLng(pt);
+      segs.push([ll(tail), ll(head)], [ll(wing(0.45)), ll(head), ll(wing(-0.45))]);
+    }
+  }
+  L.polyline(segs, {renderer:arrowRenderer, color:'#0b2236', weight:1.4, opacity:0.85, interactive:false}).addTo(arrowLayer);
+}
+map.on('zoomend moveend', drawArrows);
+arrowLayer.on('add', () => setTimeout(drawArrows));
+applyTime();
+setupWx('wave',  'Wave height (open water)', 'Global 25 km model: no data inside the Strait, so mostly blank here', CONFIG.waveLayers, 0.55, false);
+
+// Legends
+function updateLegends(){
+  const windOn = wx.wind && map.hasLayer(wx.wind.layer);
+  if (windOn) document.getElementById('leg-wind-img').src = `${CONFIG.geomet}?service=WMS&version=1.3.0&request=GetLegendGraphic&sld_version=1.1.0&format=image/png&layer=${wx.wind.name}&style=${wx.wind.layer.wmsParams.styles||''}`;
+  document.getElementById('leg-wind').hidden = !windOn;
+  const depthOn = currentBase === bases['Depth contours'];
+  if (depthOn) document.getElementById('leg-depth-img').src = `${CONFIG.nonna}?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image/png&style=raster&layer=${encodeURIComponent(CONFIG.nonnaLayer)}`;
+  document.getElementById('leg-depth').hidden = !depthOn;
+  document.getElementById('legends').hidden = !(windOn || depthOn);
+}
+map.on('layeradd layerremove', () => setTimeout(updateLegends));
+
+// Tap the map: wind and wave value at that point
+async function wmsValue(name, latlng, time){
+  const d = 0.01, b = [latlng.lng-d, latlng.lat-d, latlng.lng+d, latlng.lat+d].join(',');
+  const u = `${CONFIG.geomet}?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=${name}&query_layers=${name}&srs=EPSG:4326&bbox=${b}&width=11&height=11&x=5&y=5&info_format=application/json${time?`&time=${time}`:''}`;
+  const j = await (await fetch(u)).json();
+  const v = j.features?.[0]?.properties?.value;
+  return v == null ? null : +v;
+}
+map.on('click', async e => {
+  const out = document.getElementById('readout');
+  const pos = `${e.latlng.lat.toFixed(4)}° N ${Math.abs(e.latlng.lng).toFixed(4)}° W`;
+  out.textContent = pos + ' · checking…';
+  const parts = [pos];
+  try {
+    if (wx.wind) { const v = await wmsValue(wx.wind.name, e.latlng, wx.wind.layer.wmsParams.TIME);
+      if (v!=null) parts.push(`wind ${(v*1.94384).toFixed(0)} kn`); }
+    if (wx.wave) { const v = await wmsValue(wx.wave.name, e.latlng, wx.wave.layer.wmsParams.TIME);
+      if (v!=null && v >= 0 && v < 100) parts.push(`waves ${v.toFixed(1)} m (${(v*3.281).toFixed(0)} ft)`);
+      else if (map.hasLayer(wx.wave.layer)) parts.push('no wave forecast here'); }
+  } catch(err){ parts.push('values unavailable'); }
+  out.textContent = parts.join(' · ');
+  identifyDfo(e);
+});
+
+// ---------- DFO closures (ArcGIS MapServer drawn as tiles) ----------
+const ArcExport = L.TileLayer.extend({
+  initialize(url, opts){ this.base = url; L.TileLayer.prototype.initialize.call(this, '', opts); },
+  getTileUrl(c){
+    const b = this._tileCoordsToBounds(c), crs = this._map.options.crs;
+    const sw = crs.project(b.getSouthWest()), ne = crs.project(b.getNorthEast());
+    return `${this.base}/export?bbox=${sw.x},${sw.y},${ne.x},${ne.y}&bboxSR=3857&imageSR=3857&size=256,256&format=png32&transparent=true&dpi=96&f=image`;
+  }
+});
+const dfoLayers = [];
+CONFIG.dfoServices.forEach((s,i) => {
+  const layer = new ArcExport(s.url, {maxZoom:20, opacity:0.75, attribution:'DFO'});
+  dfoLayers.push({layer, url:s.url, name:s.name});
+  watchTiles(layer, addOverlay('dfo'+i, s.name, 'Fisheries and Oceans Canada', layer));
+});
+async function identifyDfo(e){
+  const sz = map.getSize(), bb = map.getBounds();
+  for (const d of dfoLayers){
+    if (!map.hasLayer(d.layer)) continue;
+    try {
+      const u = `${d.url}/identify?geometry=${e.latlng.lng},${e.latlng.lat}&geometryType=esriGeometryPoint&sr=4326&layers=all&tolerance=2&mapExtent=${bb.getWest()},${bb.getSouth()},${bb.getEast()},${bb.getNorth()}&imageDisplay=${sz.x},${sz.y},96&returnGeometry=false&f=json`;
+      const j = await (await fetch(u)).json();
+      if (j.results?.length){
+        const html = j.results.slice(0,3).map(r => `<b>${r.layerName}</b><br>` +
+          Object.entries(r.attributes).filter(([k,v]) => v && !/^(OBJECTID|Shape|FID)/i.test(k)).slice(0,8)
+            .map(([k,v]) => `${k}: ${v}`).join('<br>')).join('<hr>');
+        L.popup().setLatLng(e.latlng).setContent(`<div>${html}</div>`).openOn(map);
+        return;
+      }
+    } catch(err){ /* service blocks lookups from a local file; zones still draw */ }
+  }
+}
+
+// DFO zones from your own file
+const fileLayer = L.geoJSON(null, {
+  style:{color:'#c0392b', weight:2, fillColor:'#c0392b', fillOpacity:0.25},
+  onEachFeature:(f,l) => l.bindPopup(Object.entries(f.properties||{}).map(([k,v]) => `<b>${k}:</b> ${v}`).join('<br>'))
+}).addTo(map);
+document.getElementById('dfofile').addEventListener('change', e => {
+  const f = e.target.files[0], st = document.getElementById('dfostatus'); if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { try { fileLayer.clearLayers(); fileLayer.addData(JSON.parse(r.result));
+      st.textContent = `Loaded ${fileLayer.getLayers().length} zones from ${f.name}.`;
+      if (fileLayer.getLayers().length) map.fitBounds(fileLayer.getBounds(), {padding:[20,20]});
+    } catch(err){ st.textContent = 'That file is not GeoJSON. Export the layer as GeoJSON and try again.'; } };
+  r.readAsText(f);
+});
+
+// ---------- Spots ----------
+const spots = [
+  ['Bowen Island', 49.375,-123.37,'Area 28 · Howe Sound'], ['Thrasher Rock', 49.153,-123.636,'Area 17'],
+  ['Gabriola Island', 49.165,-123.83,'Area 17'], ['Nanaimo', 49.166,-123.937,'Area 17'],
+  ['Entrance Island', 49.209,-123.81,'Lighthouse · wind obs'], ['Halibut Bank buoy', 49.34,-123.727,'Buoy 46146']
+];
+const spotLayer = L.layerGroup(spots.map(([n,lat,lon,a]) =>
+  L.circleMarker([lat,lon], {radius:6, color:'#fff', weight:2, fillColor:'#0b5d8a', fillOpacity:1})
+   .bindPopup(`<b>${n}</b><br>${a}`).bindTooltip(n, {permanent:true, direction:'right', offset:[6,0], className:'lbl'})));
+addOverlay('spots','Key spots','Fishing spots and stations', spotLayer)('ok','on');
+
+// ---------- Tides (Canadian Hydrographic Service) ----------
+const tideBox = document.getElementById('tides');
+const tideMarkers = L.layerGroup();
+const setTideStatus = addOverlay('tide','Tide stations','Next high and low on the map', tideMarkers);
+const tideCurves = {};
+async function loadTides(){
+  const from = new Date(), to = new Date(from.getTime() + 48*3600e3);
+  const iso = d => d.toISOString().replace(/\.\d{3}Z$/,'Z');
+  tideBox.innerHTML = ''; let okCount = 0;
+  for (const s of CONFIG.tideStations){
+    const el = document.createElement('div'); el.className='tide';
+    el.innerHTML = `<b>${s.name}</b><span class="ev">${s.near} · loading…</span>`; tideBox.appendChild(el);
+    try {
+      const st = (await (await fetch(`${CONFIG.iwls}/stations?code=${s.code}`)).json())[0];
+      if (!st) throw new Error('no station');
+      const q = `from=${iso(from)}&to=${iso(to)}`;
+      const [hilo, curve] = await Promise.all([
+        fetch(`${CONFIG.iwls}/stations/${st.id}/data?time-series-code=wlp-hilo&${q}`).then(r=>r.json()),
+        fetch(`${CONFIG.iwls}/stations/${st.id}/data?time-series-code=wlp&${q}&resolution=FIFTEEN_MINUTES`).then(r=>r.json()).catch(()=>[])
+      ]);
+      tideCurves[s.code] = {name:s.name, lat:st.latitude, lon:st.longitude, pts:(curve||[]).map(p => [Date.parse(p.eventDate), p.value])};
+      if (typeof loadDaylight === 'function') loadDaylight();
+      const ev = hilo.map((p,i,a) => {
+        const prev = a[i-1]?.value, next = a[i+1]?.value, v = p.value;
+        const high = prev!=null ? v>prev : v>next;
+        return {t:new Date(p.eventDate), v, high};
+      });
+      const line = ev.slice(0,6).map(x => `${x.high?'H':'L'} ${fmt(x.t,{weekday:'short',hour:'numeric',minute:'2-digit'})}  ${x.v.toFixed(1)} m`).join('<br>');
+      el.innerHTML = `<b>${s.name}</b><span class="ev">${s.near}</span>${sparkline(curve, st.latitude, st.longitude, ev)}<span class="ev">${line || 'No predictions returned'}</span>`;
+      const n = ev[0];
+      if (n) L.circleMarker([st.latitude, st.longitude], {radius:7, color:'#fff', weight:2, fillColor:'#1e7d4f', fillOpacity:1})
+        .bindTooltip(`${s.name} · next ${n.high?'high':'low'} ${fmt(n.t,{hour:'numeric',minute:'2-digit'})} ${n.v.toFixed(1)} m`, {permanent:true, direction:'bottom', offset:[0,6], className:'lbl'})
+        .addTo(tideMarkers);
+      okCount++;
+    } catch(err){
+      el.innerHTML = `<b>${s.name}</b><span class="ev">Couldn't load. <a href="https://www.tides.gc.ca/en/stations/${s.code}" target="_blank" rel="noopener">Open on tides.gc.ca</a></span>`;
+    }
+  }
+  setTideStatus(okCount ? 'ok':'bad', okCount ? 'live':'failed');
+}
+function sparkline(pts, lat, lon, events){
+  if (!pts?.length) return '';
+  const W=320, H=64, vs=pts.map(p=>p.value), lo=Math.min(...vs), hi=Math.max(...vs);
+  const t0=new Date(pts[0].eventDate).getTime(), t1=new Date(pts[pts.length-1].eventDate).getTime();
+  const x=t=>((t-t0)/(t1-t0||1))*W, y=v=>H-14-((v-lo)/(hi-lo||1))*(H-28);   // 14 px room above and below for labels
+  const d = pts.map((p,i)=>`${i?'L':'M'}${x(new Date(p.eventDate).getTime()).toFixed(1)},${y(p.value).toFixed(1)}`).join('');
+  // High / low heights
+  let depth = '';
+  for (const e of events || []){
+    const tt = e.t.getTime(); if (tt < t0 || tt > t1) continue;
+    const px = x(tt)/W*100, py = y(e.v)/H*100;
+    depth += `<span class="tv ${e.high ? 'hi' : 'lo'}" style="left:${px.toFixed(1)}%;top:${py.toFixed(1)}%" title="${e.high ? 'High' : 'Low'} ${fmt(e.t,{weekday:'short',hour:'numeric',minute:'2-digit'})}">${e.v.toFixed(1)}</span>`;
+  }
+  depth += `<span class="ty" style="top:${(y(hi)/H*100).toFixed(1)}%">${hi.toFixed(1)} m</span><span class="ty" style="top:${(y(lo)/H*100).toFixed(1)}%">${lo.toFixed(1)} m</span>`;
+  // Sunrise / sunset / midnight markers
+  let night = '', lines = '', labels = '';
+  if (lat != null){
+    const suns = [];
+    for (let k = -1; k <= 3; k++){ const n = new Date(t0 + k*864e5); n.setUTCHours(20,0,0,0); suns.push(sunTimes(n, lat, lon)); }
+    // shade from each sunset to the next sunrise
+    for (let k = 0; k < suns.length - 1; k++){
+      const a = Math.max(t0, suns[k].set.getTime()), b = Math.min(t1, suns[k+1].rise.getTime());
+      if (b > a) night += `<rect x="${x(a).toFixed(1)}" y="0" width="${(x(b)-x(a)).toFixed(1)}" height="${H}" fill="var(--fg)" opacity=".07"/>`;
+    }
+    for (const sn of suns) for (const [t, kind] of [[sn.rise.getTime(),'Sunrise'],[sn.set.getTime(),'Sunset']])
+      if (t > t0 && t < t1) lines += `<line x1="${x(t).toFixed(1)}" y1="0" x2="${x(t).toFixed(1)}" y2="${H}" stroke="var(--warn)" stroke-width="1" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"><title>${kind} ${fmt(new Date(t),{weekday:'short',hour:'numeric',minute:'2-digit'})}</title></line>`;
+    // local midnights
+    const hr = new Intl.DateTimeFormat('en-CA', {timeZone:CONFIG.tz, hour:'numeric', hourCycle:'h23'});
+    for (let t = Math.ceil(t0/3600e3)*3600e3; t < t1; t += 3600e3){
+      if (+hr.format(new Date(t)) === 0){
+        lines += `<line x1="${x(t).toFixed(1)}" y1="0" x2="${x(t).toFixed(1)}" y2="${H}" stroke="var(--muted)" stroke-width="1" vector-effect="non-scaling-stroke"><title>Midnight</title></line>`;
+        labels += `<span class="tl" style="left:${(x(t)/W*100).toFixed(1)}%">${fmt(new Date(t + 3600e3),{weekday:'short'})}</span>`;
+      }
+    }
+  }
+  return `<div class="tc"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Tide curve, ${lo.toFixed(1)} to ${hi.toFixed(1)} m, with sunrise, sunset and midnight marked">
+    ${night}<path d="${d}L${W},${H}L0,${H}Z" fill="var(--pin)" opacity=".15"/><path d="${d}" fill="none" stroke="var(--pin)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+    ${lines}<line x1="1" y1="0" x2="1" y2="${H}" stroke="var(--accent)" stroke-width="2"/></svg>${depth}${labels ? `<div class="tls">${labels}</div>` : ''}</div>`;
+}
+loadTides();
+
+// ---------- Live ships (AIS) ----------
+const dm = (v, pos, neg) => { const a = Math.abs(v), d = Math.floor(a); return `${d}° ${((a - d) * 60).toFixed(3)}′ ${v >= 0 ? pos : neg}`; };
+const govLayer = L.layerGroup(), otherLayer = L.layerGroup();
+const setGovStatus = addOverlay('gov', 'Coast Guard & DFO ships', 'Live AIS · needs the AIS helper running', govLayer);
+const setOtherStatus = addOverlay('ships', 'Other ships', 'Live AIS, all other vessels', otherLayer, false);
+const isGov = v => CONFIG.govNames.test(v.name || '') || CONFIG.govMmsi.includes(String(v.mmsi));
+function boatIcon(v, gov){
+  const rot = v.heading ?? v.cog ?? 0, moving = (v.sog ?? 0) > 0.5;
+  const fill = gov ? '#d62828' : '#5b6770', size = gov ? 22 : 16;
+  const shape = moving ? `<path d="M12 2 L19 21 L12 17 L5 21 Z"/>` : `<circle cx="12" cy="12" r="6"/>`;
+  return L.divIcon({className:'', iconSize:[size,size], iconAnchor:[size/2,size/2],
+    html:`<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="transform:rotate(${moving ? rot : 0}deg)"><g fill="${fill}" stroke="#fff" stroke-width="1.5">${shape}</g></svg>`});
+}
+const esc2 = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function loadShips(){
+  if (!map.hasLayer(govLayer) && !map.hasLayer(otherLayer)) return;
+  try {
+    const d = await (await fetch(CONFIG.aisFeed, {cache:'no-store'})).json();
+    govLayer.clearLayers(); otherLayer.clearLayers();
+    let gov = 0, other = 0;
+    for (const v of d.vessels){
+      const g = isGov(v);
+      const age = Math.round((Date.now() - v.time) / 60000);
+      const tip = `<b>${esc2(v.name || 'Unknown')}</b><br>MMSI ${esc2(v.mmsi)}${v.callsign ? ' · ' + esc2(v.callsign) : ''}<br>` +
+        `${v.sog != null ? v.sog.toFixed(1) + ' kn' : '–'} · ${v.cog != null ? Math.round(v.cog) + '°' : '–'}${v.destination ? '<br>To: ' + esc2(v.destination) : ''}<br>` +
+        `${age < 1 ? 'just now' : age + ' min ago'}<br>${dm(v.lat,'N','S')} ${dm(v.lon,'E','W')}`;
+      const mk = L.marker([v.lat, v.lon], {icon:boatIcon(v, g), zIndexOffset: g ? 1000 : 0}).bindPopup(tip);
+      if (g){ mk.bindTooltip(esc2(v.name), {permanent:true, direction:'right', offset:[10,0], className:'lbl'}); mk.addTo(govLayer); gov++; }
+      else { mk.addTo(otherLayer); other++; }
+    }
+    const live = d.connected ? 'live' : 'reconnecting';
+    setGovStatus(d.connected ? 'ok' : 'warn', `${gov} ${live}`);
+    setOtherStatus(d.connected ? 'ok' : 'warn', `${other} ${live}`);
+  } catch(e){
+    setGovStatus('bad', 'helper off'); setOtherStatus('bad', 'helper off');
+  }
+}
+loadShips(); setInterval(loadShips, 15000);
+govLayer.on('add', loadShips); otherLayer.on('add', loadShips);
+
+// ---------- Daylight hours table (24 h view) ----------
+function sunTimes(date, lat, lng){
+  const rad = Math.PI/180, dayMs = 864e5, J1970 = 2440588, J2000 = 2451545, J0 = 0.0009, e = rad*23.4397;
+  const fromJulian = j => new Date((j + 0.5 - J1970) * dayMs);
+  const d = date.valueOf()/dayMs - 0.5 + J1970 - J2000;
+  const lw = rad * -lng, phi = rad * lat;
+  const n = Math.round(d - J0 - lw/(2*Math.PI)), ds = J0 + lw/(2*Math.PI) + n;
+  const M = rad*(357.5291 + 0.98560028*ds);
+  const C = rad*(1.9148*Math.sin(M) + 0.02*Math.sin(2*M) + 0.0003*Math.sin(3*M));
+  const L = M + C + rad*102.9372 + Math.PI;
+  const dec = Math.asin(Math.sin(e)*Math.sin(L));
+  const Jnoon = J2000 + ds + 0.0053*Math.sin(M) - 0.0069*Math.sin(2*L);
+  const w = Math.acos((Math.sin(rad*-0.833) - Math.sin(phi)*Math.sin(dec)) / (Math.cos(phi)*Math.cos(dec)));
+  const Jset = J2000 + J0 + (w + lw)/(2*Math.PI) + n + 0.0053*Math.sin(M) - 0.0069*Math.sin(2*L);
+  return {rise: fromJulian(Jnoon - (Jset - Jnoon)), set: fromJulian(Jset)};
+}
+const compass = deg => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+function tideAt(lat, lon, t){
+  const st = Object.values(tideCurves).filter(c => c.pts.length)
+    .sort((a, b) => Math.hypot(a.lat-lat, (a.lon-lon)*0.65) - Math.hypot(b.lat-lat, (b.lon-lon)*0.65))[0];
+  if (!st) return null;
+  const p = st.pts, i = p.findIndex(q => q[0] >= t);
+  if (i <= 0) return null;
+  const [t0, v0] = p[i-1], [t1, v1] = p[i], v = v0 + (v1 - v0) * (t - t0) / (t1 - t0);
+  return {v, rising: v1 > v0, station: st.name};
+}
+let tapPoint = null;
+const dlspot = document.getElementById('dlspot');
+spots.forEach(([n, lat, lon], i) => dlspot.add(new Option(n, 's' + i)));
+dlspot.add(new Option('Last spot tapped on the map', 'tap'));
+try { const v = localStorage.getItem('dlspot'); if (v && [...dlspot.options].some(o => o.value === v)) dlspot.value = v; } catch(e){}
+dlspot.addEventListener('change', () => { try { localStorage.setItem('dlspot', dlspot.value); } catch(e){} loadDaylight(); });
+map.on('click', e => { tapPoint = e.latlng; if (dlspot.value === 'tap') loadDaylight(); });
+function dlLocation(){
+  if (dlspot.value === 'tap') return tapPoint ? {name:'Tapped spot', lat:tapPoint.lat, lon:tapPoint.lng} : null;
+  const [name, lat, lon] = spots[+dlspot.value.slice(1)];
+  return {name, lat, lon};
+}
+let dlRun = 0;
+async function loadDaylight(){
+  const sec = document.getElementById('daylight'), box = document.getElementById('dltable');
+  const mode = +fhour.max <= 24 ? 'day' : +fhour.max <= 168 ? 'week' : null;
+  sec.hidden = !mode;
+  fhour.hidden = !!mode;
+  if (!mode) return;
+  document.getElementById('dltitle').textContent = mode === 'day' ? 'Daylight hours, sunrise to sunset · tap an hour' : 'Monday to Sunday · four blocks from sunrise to sunset · tap a block';
+  fhour.hidden = true;
+  const loc = dlLocation();
+  if (!loc){ box.innerHTML = '<p class="note">Tap a spot on the water to see its forecast.</p>'; return; }
+  const run = ++dlRun;
+  if (mode === 'week') return loadWeek(loc, run, box);
+  const now = new Date(), start = new Date(now); start.setUTCMinutes(0,0,0);
+  const end = new Date(start.getTime() + 24*3600e3);
+  // daylight hours inside the next 24 h, by local day
+  const days = [];
+  for (const base of [now, new Date(now.getTime() + 864e5)]){
+    const noon = new Date(base); noon.setUTCHours(20, 0, 0, 0);   // ~noon Pacific
+    const {rise, set} = sunTimes(noon, loc.lat, loc.lon);
+    const hours = [];
+    const h = new Date(rise); h.setUTCMinutes(0,0,0); if (h < rise) h.setTime(h.getTime() + 3600e3);
+    for (; h <= set; h.setTime(h.getTime() + 3600e3)) if (h >= start && h <= end) hours.push(new Date(h));
+    if (hours.length) days.push({rise, set, hours});
+  }
+  if (!days.length){ box.innerHTML = '<p class="note">No daylight in the next 24 hours.</p>'; return; }
+  box.innerHTML = '<p class="note">Loading hourly wind…</p>';
+  const area = {south:loc.lat - 0.03, north:loc.lat + 0.03, west:loc.lon - 0.04, east:loc.lon + 0.04};
+  const all = days.flatMap(d => d.hours);
+  const wind = await Promise.all(all.map(async t => {
+    const iso = t.toISOString().replace('.000',''), m = modelFor(t);
+    try {
+      const [dg, sg] = await Promise.all([fetchGrid(m.dir, iso, area), fetchGrid(m.speed, iso, area)]);
+      const r = Math.floor(dg.h.nrows/2), c = Math.floor(dg.h.ncols/2);
+      const d = dg.rows[r][c], sp = sg.rows[Math.floor(sg.h.nrows/2)][Math.floor(sg.h.ncols/2)];
+      return (d >= 0 && d <= 360 && sp >= 0) ? {dir:d, kn:sp*1.94384} : null;
+    } catch(e){ return null; }
+  }));
+  if (run !== dlRun) return;
+  const fmtT = d => fmt(d, {hour:'numeric', minute:'2-digit'});
+  let k = 0, rows = '';
+  for (const d of days){
+    rows += `<tr class="day"><td colspan="3">${fmt(d.hours[0], {weekday:'long', month:'short', day:'numeric'})} · sunrise ${fmtT(d.rise)} · sunset ${fmtT(d.set)}</td></tr>`;
+    for (const t of d.hours){
+      const w = wind[k++], td = tideAt(loc.lat, loc.lon, t.getTime());
+      const cls = !w ? '' : w.kn < 10 ? 'c' : w.kn < 20 ? 'w' : 'x';
+      const off = Math.round((t - start) / 3600e3);
+      const windCell = w ? `<span class="dir" style="transform:rotate(${(w.dir + 180) % 360}deg)" aria-hidden="true">↑</span> ${compass(w.dir)} <span class="kn ${cls}">${w.kn.toFixed(0)}</span> kn` : '–';
+      const tideCell = td ? `${td.v.toFixed(1)} m ${td.rising ? '▲' : '▼'}` : '–';
+      rows += `<tr class="hr${off === +fhour.value ? ' on' : ''}" data-off="${off}" title="Show this hour on the map"><td>${fmt(t, {hour:'numeric'})}</td><td>${windCell}</td><td>${tideCell}</td></tr>`;
+    }
+  }
+  const tideSt = tideAt(loc.lat, loc.lon, all[0].getTime())?.station;
+  box.innerHTML = `<div style="overflow-x:auto"><table class="dl"><thead><tr><th>Hour</th><th>Wind (from)</th><th>Tide</th></tr></thead><tbody>${rows}</tbody></table></div>` +
+    `<p class="note" style="margin-top:6px">${esc2(loc.name)} · wind from Environment Canada${tideSt ? ` · tide at ${esc2(tideSt)}` : ''}. Tap an hour to show it on the map.</p>`;
+  box.querySelectorAll('tr.hr').forEach(tr => tr.addEventListener('click', () => {
+    fhour.value = Math.min(+fhour.max, +tr.dataset.off); applyTime();
+    box.querySelectorAll('tr.hr').forEach(x => x.classList.toggle('on', x === tr));
+  }));
+}
+function markSelected(){
+  const v = +fhour.value, st = +fhour.step;
+  document.querySelectorAll('#dltable [data-off]').forEach(x => x.classList.toggle('on', Math.round(+x.dataset.off / st) * st === v));
+}
+async function windAt(loc, t){
+  const m = modelFor(t), area = {south:loc.lat - 0.06, north:loc.lat + 0.06, west:loc.lon - 0.08, east:loc.lon + 0.08};
+  const iso = t.toISOString().replace('.000','');
+  try {
+    const [dg, sg] = await Promise.all([fetchGrid(m.dir, iso, area), fetchGrid(m.speed, iso, area)]);
+    const mid = g => g.rows[Math.floor(g.h.nrows/2)][Math.floor(g.h.ncols/2)];
+    const d = mid(dg), sp = mid(sg);
+    return (d >= 0 && d <= 360 && sp >= 0) ? {dir:d, kn:sp*1.94384} : null;
+  } catch(e){ return null; }
+}
+async function loadWeek(loc, run, box){
+  box.innerHTML = '<p class="note">Loading 7-day wind…</p>';
+  const now = new Date(), start = new Date(now); start.setUTCMinutes(0,0,0);
+  const end = new Date(start.getTime() + 168*3600e3);
+  const WD = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const wdIndex = d => WD.indexOf(fmt(d, {weekday:'short'}).slice(0,3));
+  const days = [];
+  for (let i = 0; i < 7; i++){
+    const noon = new Date(now.getTime() + i*864e5); noon.setUTCHours(20,0,0,0);
+    const {rise, set} = sunTimes(noon, loc.lat, loc.lon), q = (set - rise) / 4;
+    const blocks = [0,1,2,3].map(k => {
+      const from = new Date(rise.getTime() + k*q), to = new Date(rise.getTime() + (k+1)*q);
+      let mid = new Date(rise.getTime() + (k+0.5)*q);
+      if (mid < start) mid = new Date(Math.min(to, Math.max(start, mid)));
+      const sample = (mid - start) > 47*3600e3 ? snap3(mid) : new Date(Math.round(mid.getTime()/3600e3)*3600e3);
+      return {from, to, sample, past: to < now || sample > end};
+    });
+    days.push({noon, rise, set, blocks});
+  }
+  const todo = days.flatMap(d => d.blocks).filter(b => !b.past);
+  // fetch in small batches to be gentle on the service
+  for (let i = 0; i < todo.length; i += 8){
+    const part = todo.slice(i, i + 8);
+    const res = await Promise.all(part.map(b => windAt(loc, b.sample)));
+    part.forEach((b, j) => b.wind = res[j]);
+    if (run !== dlRun) return;
+  }
+  const fmtT = d => fmt(d, {hour:'numeric', minute:'2-digit'});
+  const lead = wdIndex(days[0].noon);
+  let html = '<div class="wk">' + WD.map(d => `<div class="wkh">${d}</div>`).join('');
+  for (let i = 0; i < lead; i++) html += '<div></div>';
+  for (const d of days){
+    html += `<div class="wkd"><div class="dt" title="Sunrise ${fmtT(d.rise)} · sunset ${fmtT(d.set)}">${fmt(d.noon, {day:'numeric'})}</div>`;
+    d.blocks.forEach((b, k) => {
+      const w = b.wind, label = `${fmt(d.noon, {weekday:'long', month:'short', day:'numeric'})}, ${fmtT(b.from)}–${fmtT(b.to)}`;
+      if (b.past || !w){ html += `<button type="button" class="blk" disabled title="${label}: ${b.past ? 'passed' : 'no data'}">–</button>`; return; }
+      const cls = w.kn < 10 ? 'c' : w.kn < 20 ? 'w' : 'x';
+      const off = Math.round((b.sample - start) / 3600e3);
+      html += `<button type="button" class="blk ${cls}" data-off="${off}" title="${label}: wind ${compass(w.dir)} ${w.kn.toFixed(0)} kn. Click to show on map."><span class="dir" style="transform:rotate(${(w.dir + 180) % 360}deg)" aria-hidden="true">↑</span>${w.kn.toFixed(0)}</button>`;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  box.innerHTML = html + `<p class="note" style="margin-top:6px">${esc2(loc.name)} · wind in knots, arrow shows where it blows. Each day is split into four blocks from sunrise (top) to sunset (bottom); green under 10 kn, orange 10–20, red over 20. Click a block to show it on the map; hover for times.</p>`;
+  box.querySelectorAll('.blk[data-off]').forEach(btn => btn.addEventListener('click', () => {
+    const step = +fhour.step;
+    fhour.value = Math.min(+fhour.max, Math.round(+btn.dataset.off / step) * step); applyTime();
+    box.querySelectorAll('.blk').forEach(x => x.classList.toggle('on', x === btn));
+  }));
+}
+document.querySelectorAll('#ranges button').forEach(b => b.addEventListener('click', loadDaylight));
+loadDaylight(); setInterval(loadDaylight, 30*60e3);
+
+// ---------- VHF channel areas (labels on the map) ----------
+const vhfAreas = [
+  [49.30, -123.20, 'Ch 12 · Vancouver Traffic', '', 'Vancouver Harbour, English Bay, Howe Sound'],
+  [49.48, -123.33, 'Ch 12', '', 'Howe Sound'],
+  [49.20, -123.55, 'Ch 11 · Victoria Traffic', '', 'Strait of Georgia south of Ballenas Islands'],
+  [49.45, -124.40, 'Ch 71', '', 'North of Ballenas Islands'],
+  [49.13, -123.28, 'Ch 74 · Fraser River', '', 'Fraser River from Sand Heads'],
+  [49.38, -123.33, 'WX3', 'wx', 'Weather broadcast transmitter, Bowen Island (approximate position)']
+];
+const vhfLayer = L.layerGroup(vhfAreas.map(([lat, lon, t, cls, area]) =>
+  L.marker([lat, lon], {icon:L.divIcon({className:'', html:`<span class="vhfl ${cls}">${t}</span>`, iconSize:null, iconAnchor:[0,8]}), keyboard:false})
+    .bindPopup(`<b>${t}</b><br>${area}<br><small>Always listen on Ch 16. Check Radio Aids to Marine Navigation for exact boundaries.</small>`)));
+addOverlay('vhf', 'VHF channels', 'Which traffic channel applies where', vhfLayer, true)('ok','on');
+
+// ---------- My location (GPS) ----------
+const locLayer = L.layerGroup().addTo(map);
+let watching = false, firstFix = true;
+const locbtn = document.getElementById('locbtn');
+locbtn.addEventListener('click', () => {
+  watching = !watching; locbtn.setAttribute('aria-pressed', watching);
+  if (watching){ firstFix = true; locbtn.textContent = 'Finding you…'; map.locate({watch:true, enableHighAccuracy:true, maximumAge:5000}); }
+  else { map.stopLocate(); locLayer.clearLayers(); locbtn.textContent = 'My location'; document.getElementById('navbar').hidden = true; lastFix = null; lastCog = null; }
+});
+// Course over ground: from GPS when it reports one, otherwise worked out from the last two fixes
+let lastFix = null, lastCog = null;
+function bearing(a, b){
+  const r = Math.PI/180, y = Math.sin((b.lng-a.lng)*r)*Math.cos(b.lat*r);
+  const x = Math.cos(a.lat*r)*Math.sin(b.lat*r) - Math.sin(a.lat*r)*Math.cos(b.lat*r)*Math.cos((b.lng-a.lng)*r);
+  return (Math.atan2(y, x)/r + 360) % 360;
+}
+map.on('locationfound', e => {
+  const now = Date.now();
+  let sogKn = e.speed != null && !isNaN(e.speed) ? e.speed * 1.94384 : null;
+  let cog = e.heading != null && !isNaN(e.heading) && (sogKn ?? 1) > 0.5 ? e.heading : null;
+  if (lastFix){
+    const dist = map.distance(lastFix.ll, e.latlng), dt = (now - lastFix.t) / 1000;
+    if (sogKn == null && dt > 0) sogKn = dist / dt * 1.94384;
+    if (cog == null && dist > Math.max(8, e.accuracy * 0.5)) cog = bearing(lastFix.ll, e.latlng);
+  }
+  if (!lastFix || map.distance(lastFix.ll, e.latlng) > Math.max(8, e.accuracy * 0.5)) lastFix = {ll:e.latlng, t:now};
+  const moving = sogKn != null && sogKn > 0.5;
+  if (cog != null) lastCog = cog;
+  const showCog = moving ? (cog ?? lastCog) : null;
+
+  locLayer.clearLayers();
+  L.circle(e.latlng, {radius:e.accuracy, color:'#0b5d8a', weight:1, fillOpacity:0.08, interactive:false}).addTo(locLayer);
+  const icon = showCog != null
+    ? L.divIcon({className:'', iconSize:[30,30], iconAnchor:[15,15], html:`<svg viewBox="0 0 30 30" width="30" height="30" style="transform:rotate(${showCog}deg)"><path d="M15 2 L24 26 L15 21 L6 26 Z" fill="#d6336c" stroke="#fff" stroke-width="2"/></svg>`})
+    : L.divIcon({className:'', iconSize:[18,18], iconAnchor:[9,9], html:'<svg viewBox="0 0 18 18" width="18" height="18"><circle cx="9" cy="9" r="7" fill="#d6336c" stroke="#fff" stroke-width="2"/></svg>'});
+  L.marker(e.latlng, {icon, zIndexOffset:2000, keyboard:false}).addTo(locLayer)
+    .bindTooltip('You', {permanent:true, direction:'top', offset:[0,-14], className:'lbl'});
+
+  // Top bar
+  const bar = document.getElementById('navbar'); bar.hidden = false;
+  document.getElementById('nb-cog').textContent = showCog != null ? `${String(Math.round(showCog) % 360).padStart(3,'0')}°` : '—';
+  document.getElementById('nb-dir').textContent = showCog != null ? compass(showCog) : (moving ? '' : 'Stopped');
+  document.getElementById('nb-arrow').style.transform = `rotate(${showCog ?? 0}deg)`;
+  document.getElementById('nb-arrow').style.opacity = showCog != null ? 1 : 0.25;
+  document.getElementById('nb-sog').textContent = sogKn != null ? sogKn.toFixed(1) : '—';
+  document.getElementById('nb-pos').textContent = `${dm(e.latlng.lat,'N','S')}  ${dm(e.latlng.lng,'E','W')}  ±${Math.round(e.accuracy*3.281)} ft`;
+
+  locbtn.textContent = 'Stop location';
+  if (firstFix){ map.setView(e.latlng, Math.max(map.getZoom(), 13)); firstFix = false; }
+});
+// Start live location as soon as the map opens
+setTimeout(() => { if (!watching) locbtn.click(); }, 300);
+map.on('locationerror', e => {
+  watching = false; locbtn.setAttribute('aria-pressed', false); locbtn.textContent = 'My location';
+  document.getElementById('readout').textContent = 'Location unavailable: allow location access in your browser, or open this on a device with GPS.';
+});
+
+// ---------- Official marine forecast text (Environment Canada) ----------
+const MARINE_AREAS = /Strait of Georgia|Howe Sound/i;
+async function loadMarine(){
+  const box = document.getElementById('marine');
+  try {
+    const r = await (await fetch('https://api.weather.gc.ca/collections/marineweather-realtime/items?f=json&limit=50&bbox=-124.9,49.09,-122.84,49.57')).json();
+    const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const texts = o => { const out = []; (function walk(x){ if (!x || typeof x !== 'object') return; if (typeof x.en === 'string') { out.push(x.en); return; } Object.values(x).forEach(walk); })(o); return out; };
+    const html = [];
+    for (const f of r.features || []){
+      const p = f.properties, warn = texts(p.warnings).filter(t => t.trim());
+      for (const loc of p.regularForecast?.locations || []){
+        const name = loc.name?.en || p.area?.value?.en || 'Marine area';
+        if (!MARINE_AREAS.test(name)) continue;
+        const wc = loc.weatherCondition || {};
+        const rows = Object.entries(wc).filter(([k]) => k !== 'periodOfCoverage')
+          .map(([k, v]) => v?.en ? `<span class="k">${esc(k.replace(/^weather/,'').replace(/([A-Z])/g,' $1').trim())}</span><p>${esc(v.en)}</p>` : '').join('');
+        html.push(`<div class="mf"><b>${esc(name)}</b>${warn.length ? `<p class="warn">${esc(warn.join(' · '))}</p>` : ''}<span class="k">${esc(wc.periodOfCoverage?.en || '')}</span>${rows}</div>`);
+      }
+    }
+    const issued = r.features?.[0]?.properties?.regularForecast?.issuedDatetimeUTC;
+    box.innerHTML = (html.join('') || '<p class="note">No forecast returned for these waters.</p>') +
+      (issued ? `<p class="note" style="margin-top:6px">Issued ${fmt(new Date(issued), {weekday:'short', hour:'numeric', minute:'2-digit'})}. Inside waters forecasts give wind only; Environment Canada does not forecast wave height for the Strait of Georgia.</p>` : '');
+  } catch(e){
+    box.innerHTML = '<p class="note">Couldn\'t load the marine forecast. <a href="https://weather.gc.ca/marine/region_e.html?mapID=02" target="_blank" rel="noopener">Open it on weather.gc.ca</a></p>';
+  }
+}
+loadMarine();
+setInterval(loadMarine, 30*60e3);
+setInterval(loadTides, 30*60e3);
+setInterval(() => { Object.values(wx).forEach(w => w.layer.redraw()); arrowGrid = null; applyTime(); }, 30*60e3);
+
+// ---------- Emergency ----------
+let lastKnown = null;   // latest GPS fix {latlng, accuracy, time}
+map.on('locationfound', e => { lastKnown = {latlng:e.latlng, accuracy:e.accuracy, time:Date.now()}; if (!document.getElementById('sos').hidden) renderSOS(); });
+const SOS = {
+  MAYDAY: {
+    when: '<b>MAYDAY</b> is for <b>grave and imminent danger</b>: the boat or someone\'s life is at risk right now and you need help immediately.',
+    situations: [['sinking','We are taking on water and sinking'],['fire','We have a fire on board'],['mob','We have a person overboard'],['medical','We have a life-threatening medical emergency'],['danger','We have lost power and are drifting onto rocks'],['abandon','We are abandoning the vessel']],
+    help: 'We require immediate assistance'
+  },
+  PAN: {
+    when: '<b>PAN-PAN</b> is for an <b>urgent problem with no immediate danger to life</b>, such as a breakdown, an injury, or needing a tow. Switch to MAYDAY if it gets worse.',
+    situations: [['engine','We have engine failure, not in immediate danger'],['tow','We have lost propulsion and need a tow'],['injury','We have an injured person on board needing medical advice'],['steering','We have lost steering'],['fuel','We have run out of fuel'],['aground','We have run aground, no immediate danger']],
+    help: 'We require assistance'
+  }
+};
+let sosKind = 'MAYDAY';
+const whatSel = document.getElementById('sos-what'), whatOther = document.getElementById('sos-other');
+function fillSituations(){
+  const set = SOS[sosKind];
+  whatSel.innerHTML = set.situations.map(([v, t]) => `<option value="${v}">${t.replace(/^We (have|are) /, '').replace(/^./, c => c.toUpperCase())}</option>`).join('') + '<option value="other">Other (describe it)</option>';
+  try { const v = localStorage.getItem('sos-what-' + sosKind); if (v && [...whatSel.options].some(o => o.value === v)) whatSel.value = v; } catch(e){}
+  whatOther.hidden = whatSel.value !== 'other';
+}
+whatSel.addEventListener('change', () => { try { localStorage.setItem('sos-what-' + sosKind, whatSel.value); } catch(e){} whatOther.hidden = whatSel.value !== 'other'; renderSOS(); });
+const sosFields = ['sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta'];
+sosFields.forEach(id => { const el = document.getElementById(id);
+  try { const v = localStorage.getItem(id); if (v != null) el.value = v; } catch(e){}
+  el.addEventListener('input', () => { try { localStorage.setItem(id, el.value); } catch(e){} renderSOS(); });
+  el.addEventListener('change', renderSOS); });
+const spoken = (v, pos, neg) => { const a = Math.abs(v), d = Math.floor(a); return `${d} degrees ${((a - d) * 60).toFixed(2)} minutes ${v >= 0 ? pos : neg}`; };
+function nearestSpot(ll){
+  let best = null;
+  for (const [n, lat, lon] of spots){ const d = map.distance([lat, lon], ll); if (!best || d < best.d) best = {n, lat, lon, d}; }
+  if (!best) return '';
+  const nm = best.d / 1852, brg = bearing(L.latLng(best.lat, best.lon), ll);
+  return nm < 0.1 ? `at ${best.n}` : `${nm.toFixed(1)} nautical miles ${compass(brg)} of ${best.n}`;
+}
+document.getElementById('dest-list').innerHTML = spots.map(([n]) => `<option value="${n}">`).join('');
+function tripReturn(){
+  const v = document.getElementById('sos-eta').value; if (!v) return '';
+  const d = new Date(v); return isNaN(d) ? '' : d.toLocaleString('en-CA', {weekday:'short', hour:'numeric', minute:'2-digit'}).replace(/a\.m\./,'am').replace(/p\.m\./,'pm');
+}
+function tripLine(){
+  const dest = document.getElementById('sos-dest').value.trim(), r = tripReturn();
+  return (dest ? ` Heading to ${dest}.` : '') + (r ? ` Due back ${r}.` : '');
+}
+function updateTrip(){
+  const el = document.getElementById('nb-trip'); if (!el) return;
+  const dest = document.getElementById('sos-dest').value.trim(), v = document.getElementById('sos-eta').value;
+  if (!dest && !v){ el.hidden = true; return; }
+  const parts = [];
+  if (dest){
+    let txt = `To ${dest}`;
+    const sp = spots.find(([n]) => n.toLowerCase() === dest.toLowerCase());
+    if (sp && lastKnown){ const nm = map.distance(lastKnown.latlng, [sp[1], sp[2]]) / 1852;
+      txt += ` · ${nm.toFixed(1)} nm, ${String(Math.round(bearing(lastKnown.latlng, L.latLng(sp[1], sp[2])))).padStart(3,'0')}°`; }
+    parts.push(txt);
+  }
+  let late = false;
+  if (v){ const due = new Date(v), mins = Math.round((due - Date.now()) / 60000); late = mins < 0;
+    const span = m => { m = Math.abs(m); return m >= 60 ? `${Math.floor(m/60)} h ${m%60} min` : `${m} min`; };
+    parts.push(late ? `OVERDUE by ${span(mins)} (due ${tripReturn()})` : `Back by ${tripReturn()} · ${span(mins)} left`); }
+  el.textContent = parts.join(' · '); el.classList.toggle('late', late); el.hidden = false;
+}
+setInterval(updateTrip, 30000);
+setTimeout(updateTrip, 800);
+['sos-dest','sos-eta'].forEach(id => document.getElementById(id).addEventListener('input', updateTrip));
+map.on('locationfound', () => setTimeout(updateTrip));
+function renderSOS(){
+  const g = id => document.getElementById(id).value.trim();
+  const cname = g('sos-cname'), cphone = g('sos-cphone').replace(/[^\d+]/g, '');
+  const cBtn = document.getElementById('call-pref'), tBtn = document.getElementById('text-pref');
+  if (cphone){
+    cBtn.classList.remove('off'); tBtn.classList.remove('off'); document.getElementById('text-plan').classList.remove('off');
+    cBtn.firstChild.nodeValue = `Call ${cname || 'contact'}`;
+    document.getElementById('pref-sub').textContent = g('sos-cphone');
+    cBtn.href = 'tel:' + cphone;
+    const ll = lastKnown?.latlng;
+    const body = `${g('sos-name') ? g('sos-name') + ': ' : ''}I need help. My position: ` +
+      (ll ? `${dm(ll.lat,'N','S')} ${dm(ll.lng,'E','W')} (${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}) https://maps.google.com/?q=${ll.lat.toFixed(5)},${ll.lng.toFixed(5)}` : 'unknown, GPS not available');
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), sep = ios ? '&' : '?';
+    tBtn.href = `sms:${cphone}${sep}body=${encodeURIComponent(body + tripLine())}`;
+    const plan = `${g('sos-name') || 'Our boat'} trip plan: ` +
+      (ll ? `leaving from ${dm(ll.lat,'N','S')} ${dm(ll.lng,'E','W')}, ` : '') +
+      `heading to ${g('sos-dest') || '[destination]'}. ${tripReturn() ? 'Back by ' + tripReturn() + '.' : '[return time not set]'} ` +
+      `${g('sos-pob') ? g('sos-pob') + ' on board. ' : ''}${g('sos-desc') ? 'Boat: ' + g('sos-desc') + '. ' : ''}` +
+      `If you have not heard from me 1 hour after that, call the Coast Guard: *16 on a cell phone, or 911.`;
+    document.getElementById('text-plan').href = `sms:${cphone}${sep}body=${encodeURIComponent(plan)}`;
+  } else {
+    cBtn.classList.add('off'); tBtn.classList.add('off'); document.getElementById('text-plan').classList.add('off');
+    cBtn.firstChild.nodeValue = 'Call contact';
+    document.getElementById('pref-sub').textContent = 'set it up below';
+    cBtn.href = '#'; tBtn.href = '#';
+    document.getElementById('text-plan').href = '#';
+  }
+  const name = g('sos-name') || '[vessel name]', call = g('sos-call'), pob = g('sos-pob') || '[number]', desc = g('sos-desc') || '[colour, length, type of boat]';
+  const set = SOS[sosKind];
+  const what = whatSel.value === 'other' ? 'We have ' + (g('sos-other') || '[what is happening]') : (set.situations.find(x => x[0] === whatSel.value)?.[1] || 'We have [what is happening]');
+  document.getElementById('sos-when').innerHTML = set.when;
+  document.querySelector('.sos-card').classList.toggle('pan', sosKind !== 'MAYDAY');
+  const fresh = lastKnown && Date.now() - lastKnown.time < 5*60e3;
+  let posTxt = '[your position]';
+  if (lastKnown){
+    const ll = lastKnown.latlng;
+    document.getElementById('sos-coord').textContent = `${dm(ll.lat,'N','S')}  ${dm(ll.lng,'E','W')}`;
+    const near = nearestSpot(ll);
+    document.getElementById('sos-near').textContent = near ? 'About ' + near : '';
+    document.getElementById('sos-acc').textContent = `GPS accuracy ±${Math.round(lastKnown.accuracy*3.281)} ft · ${fresh ? 'updated ' + fmt(new Date(lastKnown.time), {hour:'numeric', minute:'2-digit', second:'2-digit'}) : 'OLD FIX, may be out of date'}`;
+    posTxt = `${spoken(ll.lat,'North','South')}, ${spoken(ll.lng,'East','West')}${near ? ', about ' + near : ''}`;
+  }
+  const id = call ? `${name} ${call}` : name;
+  const f = t => `<span class="fill">${esc2(t)}</span>`;
+  const lines = sosKind === 'MAYDAY' ? [
+    `<b>MAYDAY, MAYDAY, MAYDAY</b>`,
+    `This is ${f(name)}, ${f(name)}, ${f(name)}${call ? ', call sign ' + f(call) : ''}`,
+    `<b>MAYDAY</b> ${f(id)}`,
+    `My position is ${f(posTxt)}`,
+    `${f(what)}`,
+    `${set.help}`,
+    `${f(pob)} people on board`,
+    `Vessel is ${f(desc)}`,
+    `<b>OVER</b>`
+  ] : [
+    `<b>PAN-PAN, PAN-PAN, PAN-PAN</b>`,
+    `All stations, all stations, all stations`,
+    `This is ${f(name)}, ${f(name)}, ${f(name)}${call ? ', call sign ' + f(call) : ''}`,
+    `My position is ${f(posTxt)}`,
+    `${f(what)}`,
+    `${set.help}`,
+    `${f(pob)} people on board`,
+    `Vessel is ${f(desc)}`,
+    `<b>OVER</b>`
+  ];
+  document.getElementById('sos-lines').innerHTML = lines.map(l => `<li>${l}</li>`).join('');
+}
+function openSOS(){
+  document.getElementById('sos').hidden = false;
+  if (!whatSel.options.length) fillSituations();
+  renderSOS();
+  if (!lastKnown || Date.now() - lastKnown.time > 60e3){
+    if (!lastKnown) document.getElementById('sos-coord').textContent = 'Getting GPS position…';
+    if (!watching) document.getElementById('locbtn').click();   // start live location so the position keeps updating
+  }
+  document.getElementById('sos-close').focus();
+}
+document.getElementById('sosbtn').addEventListener('click', openSOS);
+['call-pref','text-pref','text-plan'].forEach(id => document.getElementById(id).addEventListener('click', e => {
+  if (e.currentTarget.classList.contains('off')){ e.preventDefault(); const d = document.querySelector('.sos-set'); d.open = true; document.getElementById('sos-cname').focus(); }
+}));
+document.getElementById('sos-close').addEventListener('click', () => document.getElementById('sos').hidden = true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('sos').hidden = true; });
+['t-may','t-pan'].forEach(id => document.getElementById(id).addEventListener('click', () => {
+  sosKind = id === 't-may' ? 'MAYDAY' : 'PAN';
+  document.getElementById('t-may').setAttribute('aria-pressed', sosKind === 'MAYDAY');
+  document.getElementById('t-pan').setAttribute('aria-pressed', sosKind !== 'MAYDAY');
+  fillSituations(); renderSOS();
+}));
+map.on('locationerror', () => { if (!lastKnown) document.getElementById('sos-coord').textContent = 'No GPS position. Allow location access, or read your position from your chartplotter.'; });
+
+// ---------- Google sign-in: save settings to your account ----------
+const SYNC_KEYS = ['sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta','sos-what-MAYDAY','sos-what-PAN','dlspot'];
+(function setupAccount(){
+  const box = document.getElementById('acct');
+  if (!CONFIG.firebase || typeof firebase === 'undefined' || location.protocol === 'file:') return;   // only on the hosted site
+  box.hidden = false;
+  firebase.initializeApp(CONFIG.firebase);
+  const auth = firebase.auth(), db = firebase.firestore();
+  const who = document.getElementById('acct-who'), sbtn = document.getElementById('gsign'), obtn = document.getElementById('gout');
+  let docRef = null, saveTimer = null, applying = false;
+  const readLocal = () => Object.fromEntries(SYNC_KEYS.map(k => { try { return [k, localStorage.getItem(k) ?? '']; } catch(e){ return [k, '']; } }));
+  function applyRemote(data){
+    applying = true;
+    for (const k of SYNC_KEYS){
+      if (data[k] == null) continue;
+      try { localStorage.setItem(k, data[k]); } catch(e){}
+      const el = document.getElementById(k);
+      if (el && el.value !== data[k]) el.value = data[k];
+    }
+    if (data.dlspot && [...dlspot.options].some(o => o.value === data.dlspot)){ dlspot.value = data.dlspot; loadDaylight(); }
+    try { fillSituations(); } catch(e){}
+    renderSOS(); updateTrip();
+    applying = false;
+  }
+  function scheduleSave(){
+    if (!docRef || applying) return;
+    clearTimeout(saveTimer);
+    who.textContent = who.dataset.name + ' · saving…';
+    saveTimer = setTimeout(async () => {
+      try { await docRef.set({...readLocal(), updated: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+        who.textContent = who.dataset.name + ' · settings saved to your account'; }
+      catch(e){ who.textContent = who.dataset.name + ' · could not save (offline?)'; }
+    }, 1200);
+  }
+  // Save whenever a synced field changes
+  document.addEventListener('input', e => { if (SYNC_KEYS.includes(e.target.id)) scheduleSave(); });
+  document.addEventListener('change', e => { if (SYNC_KEYS.includes(e.target.id) || e.target.id === 'sos-what') scheduleSave(); });
+  sbtn.addEventListener('click', async () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try { if (/Android|iPhone|iPad/.test(navigator.userAgent)) await auth.signInWithRedirect(provider); else await auth.signInWithPopup(provider); }
+    catch(e){ who.textContent = 'Sign-in failed: ' + (e.message || e.code); }
+  });
+  obtn.addEventListener('click', () => auth.signOut());
+  auth.onAuthStateChanged(async user => {
+    if (!user){ docRef = null; sbtn.hidden = false; obtn.hidden = true; who.textContent = 'Settings are saved on this device only'; return; }
+    sbtn.hidden = true; obtn.hidden = false;
+    who.dataset.name = user.displayName || user.email;
+    who.textContent = who.dataset.name + ' · loading your settings…';
+    docRef = db.collection('users').doc(user.uid);
+    try {
+      const snap = await docRef.get();
+      if (snap.exists) applyRemote(snap.data()); else await docRef.set({...readLocal(), updated: firebase.firestore.FieldValue.serverTimestamp()});
+      who.textContent = who.dataset.name + ' · settings saved to your account';
+    } catch(e){ who.textContent = who.dataset.name + ' · could not load settings'; }
+  });
+})();
+</script>
+</body>
+</html>
