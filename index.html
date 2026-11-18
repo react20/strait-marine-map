@@ -1750,6 +1750,8 @@ function openCal(){
 }
 document.getElementById('calbtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openCal(); });
 document.getElementById('cal-close').addEventListener('click', () => document.getElementById('cal').hidden = true);
+// Tap outside the calendar card (the dimmed area) to close it
+document.getElementById('cal').addEventListener('click', e => { if (e.target.id === 'cal') e.currentTarget.hidden = true; });
 document.getElementById('cal-prev').addEventListener('click', () => { if (--calState.m < 0){ calState.m = 11; calState.y--; } renderCal(); });
 document.getElementById('cal-next').addEventListener('click', () => { if (++calState.m > 11){ calState.m = 0; calState.y++; } renderCal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('cal').hidden = true; });
