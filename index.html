@@ -1073,7 +1073,7 @@ let watching = false, firstFix = true;
 const locbtn = document.getElementById('locbtn');
 locbtn.addEventListener('click', () => {
   watching = !watching; locbtn.setAttribute('aria-pressed', watching);
-  if (watching){ firstFix = true; locbtn.textContent = 'Finding you…'; map.locate({watch:true, enableHighAccuracy:true, maximumAge:5000}); }
+  if (watching){ firstFix = true; locbtn.textContent = 'Finding you…'; map.locate({watch:true, enableHighAccuracy:true, maximumAge:5000, timeout:60000}); }
   else { map.stopLocate(); locLayer.clearLayers(); locbtn.textContent = 'My location'; document.getElementById('navbar').hidden = true; lastFix = null; lastCog = null; }
 });
 // Course over ground: from GPS when it reports one, otherwise worked out from the last two fixes
@@ -1119,9 +1119,19 @@ map.on('locationfound', e => {
 });
 // Start live location as soon as the map opens
 setTimeout(() => { if (!watching) locbtn.click(); }, 300);
+// Plain-language reason when the phone won't give a position
+const SITE_URL = 'https://react20.github.io/strait-marine-map/';
+function locWhy(e){
+  if (!/^https?:$/.test(location.protocol) || !window.isSecureContext)
+    return `Phones only share GPS with web pages opened from a web address, not from a saved file. Open ${SITE_URL} in Chrome instead (you can add it to your home screen).`;
+  if (e?.code === 1) return 'Location is blocked for this page. In Chrome tap the icon left of the address › Permissions › Location › Allow, and check the phone’s Location setting is on. Then tap My location.';
+  if (e?.code === 3) return 'No GPS fix yet (timed out). Make sure Location is on and you have a view of the sky, then tap My location.';
+  return 'No GPS position: turn on the phone’s Location setting, then tap My location.';
+}
 map.on('locationerror', e => {
-  watching = false; locbtn.setAttribute('aria-pressed', false); locbtn.textContent = 'My location';
-  document.getElementById('readout').textContent = 'Location unavailable: allow location access in your browser, or open this on a device with GPS.';
+  if (e?.code === 3 && watching && /^https?:$/.test(location.protocol)){ document.getElementById('readout').textContent = 'Still waiting for a GPS fix… make sure Location is on.'; return; }   // slow first fix: keep trying
+  map.stopLocate(); watching = false; locbtn.setAttribute('aria-pressed', false); locbtn.textContent = 'My location';
+  document.getElementById('readout').textContent = locWhy(e);
 });
 
 // ---------- Official marine forecast text (Environment Canada) ----------
@@ -1313,7 +1323,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.get
   document.getElementById('t-pan').setAttribute('aria-pressed', sosKind !== 'MAYDAY');
   fillSituations(); renderSOS();
 }));
-map.on('locationerror', () => { if (!lastKnown) document.getElementById('sos-coord').textContent = 'No GPS position. Allow location access, or read your position from your chartplotter.'; });
+map.on('locationerror', e => { if (!lastKnown) document.getElementById('sos-coord').textContent = locWhy(e) + ' Or read your position from your chartplotter.'; });
 
 
 // ---------- Tide & moon calendar ----------
