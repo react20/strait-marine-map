@@ -282,7 +282,7 @@ a{color:var(--pin)}
       <div class="seg" id="basemaps"></div>
     </section>
 
-    <details class="pane time" data-pane="time2">
+    <details class="pane time" data-pane="time2" hidden>
       <summary><h2>Forecast time · wind and waves</h2></summary>
       <div class="seg" id="ranges"><button type="button" data-h="24" aria-pressed="true">24 h</button><button type="button" data-h="168" aria-pressed="false">7 days</button><button type="button" data-h="336" aria-pressed="false">14 days</button></div>
       <div class="seg steps" id="steps"><button type="button" data-step="-24" aria-label="Back 1 day">&laquo; −1 d</button><button type="button" data-step="-1" aria-label="Back 1 step">&lsaquo; −1 h</button><button type="button" data-step="0" aria-label="Back to now">Now</button><button type="button" data-step="1" aria-label="Forward 1 step">+1 h &rsaquo;</button><button type="button" data-step="24" aria-label="Forward 1 day">+1 d &raquo;</button></div>
@@ -532,7 +532,7 @@ document.querySelectorAll('#steps button').forEach(b => b.addEventListener('clic
   fhour.value = v; applyTime(); markSelected();
 }));
 document.addEventListener('keydown', e => {
-  if (e.target.closest('input,textarea,select')) return;
+  if (e.target.closest('input,textarea,select') || document.querySelector('details.pane.time')?.hidden) return;
   const map_ = {ArrowLeft:1, ArrowRight:3};
   if (e.key in map_ && !e.target.closest('#map')){ document.querySelectorAll('#steps button')[map_[e.key]].click(); e.preventDefault(); }
 });
@@ -904,6 +904,7 @@ function dlLocation(){
 }
 let dlRun = 0;
 async function loadDaylight(){
+  if (document.querySelector('details.pane.time')?.hidden) return;   // forecast time section removed: map always shows now
   const sec = document.getElementById('daylight'), box = document.getElementById('dltable');
   const mode = +fhour.max <= 24 ? 'day' : +fhour.max <= 168 ? 'week' : null;
   sec.hidden = !mode;
