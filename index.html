@@ -134,7 +134,6 @@ section{display:flex;flex-direction:column}
 .cal-top{display:flex;justify-content:space-between;align-items:center}.cal-top h2{margin:0;font-size:19px;text-transform:none;letter-spacing:0;color:var(--fg)}
 .cal-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cal-bar b{font-size:16px;min-width:140px;text-align:center}
 .cal-nav{font:600 18px var(--sans);width:34px;height:32px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);cursor:pointer}
-.cal-bar select{margin:0 0 0 auto}
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
 .cal-h{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center}
 .cal-c{border:1px solid var(--line);border-radius:4px;padding:4px 3px;min-height:74px;display:flex;flex-direction:column;gap:2px;background:var(--bg);cursor:pointer;text-align:left;font:inherit;color:var(--fg);min-width:0}
@@ -181,6 +180,11 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .wxm small{display:block;font:500 9px var(--sans);color:var(--muted);line-height:1}
 .wxpop b{display:block;margin-top:4px}.wxpop p{margin:2px 0 0;font-size:12px;max-width:260px;white-space:normal}
 @media (max-width:760px){.wxdays{bottom:calc(104px + env(safe-area-inset-bottom,0px))}}
+.cal-c .wx{display:flex;align-items:center;gap:2px;font:600 10px var(--sans);white-space:nowrap;overflow:hidden}
+.cal-c .wx img{width:20px;height:17px;object-fit:contain;flex:none}.cal-c .wx .lo{color:var(--muted);font-weight:400}.cal-c .wx .pop{color:var(--pin);font-size:9px}
+.cal-day .wxd{display:flex;gap:10px;align-items:flex-start;font-size:13px}.cal-day .wxd img{width:44px;height:38px;object-fit:contain;flex:none}.cal-day .wxd p{margin:0 0 3px}
+.cal-bar #cal-station{margin-left:auto}.cal-bar select{margin:0}
+@media (max-width:640px){.cal-c .wx img{width:15px;height:13px}.cal-c .wx{font-size:9px}.cal-c .wx .pop{display:none}}
 .sos-card.pan{border-top-color:#e8890c}
 .sos-tabs .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sos-tabs .tabs button{font:700 14px var(--sans);padding:10px 6px;border:2px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer;line-height:1.25}
@@ -214,7 +218,7 @@ a{color:var(--pin)}
 </head>
 <body>
 <div class="app">
-  <div class="mapwrap"><div id="map"></div><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind · knots</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar" hidden><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div></div><div class="cal" id="cal" hidden role="dialog" aria-modal="true" aria-labelledby="cal-title"><div class="cal-card"><div class="cal-top"><h2 id="cal-title">Tide &amp; moon calendar</h2><button type="button" class="sos-x" id="cal-close">Close</button></div><div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-month"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><select id="cal-station" class="dlsel" aria-label="Tide station"></select></div><div class="cal-grid" id="cal-grid"></div><div class="cal-day" id="cal-day"></div><p class="note">Tide heights in metres above chart datum (lowest normal tide), from the Canadian Hydrographic Service. ▲ high (blue) and ▼ low tide, with time (24-hour) and height in metres. Bold days have the biggest tide ranges, which means stronger currents. Moon phases are calculated and accurate to within about half a day.</p></div></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="vhfbtn" id="vhfbtn" aria-expanded="false" aria-controls="vhfpop">VHF</button><div class="vhfpop" id="vhfpop" hidden><div class="vhfpop-top"><b>VHF channels</b><button type="button" class="linkbtn" id="vhfclose">Close</button></div><div class="rows vhf">
+  <div class="mapwrap"><div id="map"></div><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind · knots</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar" hidden><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div></div><div class="cal" id="cal" hidden role="dialog" aria-modal="true" aria-labelledby="cal-title"><div class="cal-card"><div class="cal-top"><h2 id="cal-title">Tide &amp; moon calendar</h2><button type="button" class="sos-x" id="cal-close">Close</button></div><div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-month"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><select id="cal-station" class="dlsel" aria-label="Tide station"></select><select id="cal-wx" class="dlsel" aria-label="Weather for"></select></div><div class="cal-grid" id="cal-grid"></div><div class="cal-day" id="cal-day"></div><p class="note">Tide heights in metres above chart datum (lowest normal tide), from the Canadian Hydrographic Service. ▲ high (blue) and ▼ low tide, with time (24-hour) and height in metres. Bold days have the biggest tide ranges, which means stronger currents. Moon phases are calculated and accurate to within about half a day. Weather is Environment Canada's 7-day town forecast (high / low °C, chance of rain).</p></div></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="vhfbtn" id="vhfbtn" aria-expanded="false" aria-controls="vhfpop">VHF</button><div class="vhfpop" id="vhfpop" hidden><div class="vhfpop-top"><b>VHF channels</b><button type="button" class="linkbtn" id="vhfclose">Close</button></div><div class="rows vhf">
         <div class="vr em"><b>16</b><span>Distress, safety and calling · <i>*16</i> on a cell phone</span></div>
         <div class="vr"><b>83A</b><span>Coast Guard working channel</span></div>
         <div class="vr"><b>12</b><span>Vessel Traffic: Vancouver Harbour, English Bay, Howe Sound</span></div>
@@ -1280,6 +1284,30 @@ CONFIG.tideStations.forEach(s => calStation.add(new Option(`Tides: ${s.name}`, s
 try { const v = localStorage.getItem('cal-station'); if (v) calStation.value = v; } catch(e){}
 calStation.addEventListener('change', () => { try { localStorage.setItem('cal-station', calStation.value); } catch(e){} renderCal(); });
 
+const calWx = document.getElementById('cal-wx');
+function fillWxTowns(){
+  const cur = calWx.value || (() => { try { return localStorage.getItem('cal-wx'); } catch(e){ return null; } })();
+  calWx.innerHTML = wxData.map(t => `<option>${esc2(t.name)}</option>`).join('') || '<option value="">Weather loading…</option>';
+  if (cur && wxData.some(t => t.name === cur)) calWx.value = cur;
+  else { const near = calStation.value === '07917' ? 'Nanaimo' : 'West Vancouver'; if (wxData.some(t => t.name === near)) calWx.value = near; }
+}
+calWx.addEventListener('change', () => { try { localStorage.setItem('cal-wx', calWx.value); } catch(e){} renderCal(); });
+// Weather for the chosen town, keyed by local date (YYYY-MM-DD)
+function wxByDate(){
+  const t = wxData.find(x => x.name === calWx.value); if (!t) return {};
+  const WDN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const today = new Date(), out = {};
+  let off = -1;
+  for (const e of t.days){
+    for (let guard = 0; guard < 9; guard++, off++){
+      const d = new Date(today.getTime() + off*864e5);
+      const wd = d.toLocaleDateString('en-CA', {timeZone:CONFIG.tz, weekday:'long'});
+      if (wd === e.day){ out[localKey(d)] = e; break; }
+    }
+    off++;
+  }
+  return out;
+}
 async function monthTides(code, y, m){
   const key = `${code}-${y}-${m}`;
   if (calState.cache[key]) return calState.cache[key];
@@ -1300,6 +1328,7 @@ async function renderCal(){
   const WD = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const lead = (first.getUTCDay() + 6) % 7, days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const phases = keyPhaseDays(y, m), todayKey = localKey(new Date());
+  fillWxTowns(); const wxd = wxByDate();
   let tides = null;
   try { tides = await monthTides(calStation.value, y, m); } catch(e){}
   if (calState.y !== y || calState.m !== m) return;   // user moved on
@@ -1315,6 +1344,8 @@ async function renderCal(){
     const p = moonPhase(Date.UTC(y, m, d, 20));
     html += `<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
       `<span class="top">${d}${moonSVG(p, 16)}</span>` +
+      (wxd[key] ? (() => { const e = wxd[key], main = e.d || e.n, hi = tempOf(e.d,'high'), lo = tempOf(e.n,'low'), pop = popOf(e.d) ?? popOf(e.n), ic = main?.abbreviatedForecast?.icon?.url;
+        return `<span class="wx" title="${esc2(main?.abbreviatedForecast?.textSummary?.en || '')}">${ic ? `<img src="${ic}" alt="">` : ''}${hi != null ? hi + '°' : ''}${lo != null ? `<span class="lo">/${lo}°</span>` : ''}${pop ? ` <span class="pop">${pop}%</span>` : ''}</span>`; })() : '') +
       (phases[key] ? `<span class="ph">${phases[key]}</span>` : '') +
       (ev.length ? ev.map(e => `<span class="tt ${e.high ? 'hi' : 'lo'}" title="${e.high ? 'High' : 'Low'} ${fmt(e.t,{hour:'numeric',minute:'2-digit'})}, ${e.v.toFixed(1)} m"><i>${e.high ? '▲' : '▼'}</i>${shortTime(e.t)} <em>${e.v.toFixed(1)}</em></span>`).join('') : (tides ? '<span class="tt">–</span>' : '')) +
       `</button>`;
@@ -1339,6 +1370,8 @@ async function renderDay(){
   const ev = tides?.byDay[key] || [];
   box.innerHTML = `<h3>${noon.toLocaleDateString('en-CA', {weekday:'long', month:'long', day:'numeric', timeZone:'UTC'})} · ${esc2(st.name || '')}</h3>` +
     `<div class="meta">${moonSVG(p, 28)}<span><b>${moonName(p)}</b> · ${Math.round(moonIllum(p) * 100)}% lit</span><span>Sunrise ${fmtT(sun.rise)} · Sunset ${fmtT(sun.set)}</span></div>` +
+    (() => { const w = wxByDate()[key]; if (!w) return ''; const main = w.d || w.n, ic = main?.abbreviatedForecast?.icon?.url;
+      return `<div class="wxd">${ic ? `<img src="${ic}" alt="">` : ''}<div>${[w.d, w.n].filter(Boolean).map(p => `<p><b>${esc2(p.period?.textForecastName?.en || '')} · ${esc2(calWx.value)}:</b> ${esc2(p.textSummary?.en || '')}</p>`).join('')}</div></div>`; })() +
     `<div class="ev">${ev.map(e => `<span>${e.high ? 'High' : 'Low'} ${fmtT(e.t)} <b>${e.v.toFixed(1)} m</b></span>`).join('') || 'No tide data'}</div>` +
     `<div id="cal-curve"><p class="note">Loading tide curve…</p></div>`;
   // Local midnight to midnight for that day
@@ -1423,6 +1456,7 @@ async function loadWx(){
     wxData = (r.features || []).map(f => ({name: f.properties.name?.en || f.properties.name, ll: [f.geometry.coordinates[1], f.geometry.coordinates[0]], days: wxPeriods(f.properties)}))
       .filter(t => WX_TOWNS.test(t.name) && t.days.length);
     setWxStatus(wxData.length ? 'ok' : 'bad', wxData.length ? 'live' : 'failed');
+    if (!document.getElementById('cal').hidden) renderCal();
   } catch(e){ setWxStatus('bad', 'failed'); }
   drawWx();
 }
@@ -1430,7 +1464,7 @@ wxLayer.on('add remove', () => setTimeout(drawWx));
 loadWx(); setInterval(loadWx, 30*60e3);
 
 // ---------- Google sign-in: save settings to your account ----------
-const SYNC_KEYS = ['cal-station','sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta','sos-what-MAYDAY','sos-what-PAN','dlspot'];
+const SYNC_KEYS = ['cal-station','cal-wx','sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta','sos-what-MAYDAY','sos-what-PAN','dlspot'];
 (function setupAccount(){
   const box = document.getElementById('acct');
   if (!CONFIG.firebase || typeof firebase === 'undefined' || location.protocol === 'file:') return;   // only on the hosted site
