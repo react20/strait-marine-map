@@ -212,6 +212,9 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .cal-c .wd{background:none;padding:0;font-size:8.5px;letter-spacing:-.03em}
 .cal-c .wd .dir{font-size:8.5px}
 @media (max-width:640px){.cal-c .bk img{width:10px !important;height:9px !important}}
+.cal-c .wi{display:flex;flex-direction:column;align-items:center;line-height:1;flex:none}
+.cal-c .wi b{font:600 8.5px var(--sans);color:var(--fg);text-shadow:0 0 2px var(--panel)}
+.cal-c .bk .wd{margin-top:5px}
 .sos-card.pan{border-top-color:#e8890c}
 .sos-tabs .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sos-tabs .tabs button{font:700 14px var(--sans);padding:10px 6px;border:2px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer;line-height:1.25}
@@ -1391,16 +1394,17 @@ function blockWeather(key, b, wxd){
   const tm = t0 + (b*6 + 3) * 3600e3;
   const town = wxData.find(x => x.name === calWx.value);
   const h = town?.hourly?.find(h => Math.abs(h.t - tm) <= 3600e3);
-  if (h) return {icon:h.icon, text:`${h.cond}${h.temp != null ? ', ' + h.temp + '°' : ''}${h.pop ? ', ' + h.pop + '% rain' : ''}`, pop:h.pop};
+  if (h) return {icon:h.icon, temp:h.temp, text:`${h.cond}${h.temp != null ? ', ' + h.temp + '°' : ''}${h.pop ? ', ' + h.pop + '% rain' : ''}`, pop:h.pop};
   const prev = localKey(new Date(t0 - 12*3600e3));
   const per = b === 0 ? wxd[prev]?.n : b === 3 ? wxd[key]?.n : wxd[key]?.d;
   if (!per) return null;
   const pop = popOf(per);
-  return {icon: per.abbreviatedForecast?.icon?.url, text: `${per.abbreviatedForecast?.textSummary?.en || ''}${pop ? ', ' + pop + '% rain' : ''}`, pop};
+  const temp = tempOf(per, b === 1 || b === 2 ? 'high' : 'low') ?? tempOf(per, 'high') ?? tempOf(per, 'low');
+  return {icon: per.abbreviatedForecast?.icon?.url, temp, text: `${per.abbreviatedForecast?.textSummary?.en || ''}${temp != null ? ', ' + (b === 1 || b === 2 ? 'high ' : 'low ') + temp + '°' : ''}${pop ? ', ' + pop + '% rain' : ''}`, pop};
 }
 function blocksHTML(key, wxd){
   return `<span class="b4">${[0,1,2,3].map(b => { const w = blockWeather(key, b, wxd);
-    return `<span class="bk" data-key="${key}" data-b="${b}" title="${BLOCK_NAMES[b]}${w ? ': ' + esc2(w.text) : ''}">${w?.icon ? `<img src="${w.icon}" alt="">` : '<i></i>'}<span class="wd"></span></span>`; }).join('')}</span>`;
+    return `<span class="bk" data-key="${key}" data-b="${b}" title="${BLOCK_NAMES[b]}${w ? ': ' + esc2(w.text) : ''}">${w ? `<span class="wi">${w.temp != null ? `<b>${w.temp}°</b>` : ''}${w.icon ? `<img src="${w.icon}" alt="">` : ''}</span>` : '<i></i>'}<span class="wd"></span></span>`; }).join('')}</span>`;
 }
 const windCache = {};
 async function loadBlockWinds(y, m, days, st){
