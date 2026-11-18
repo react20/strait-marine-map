@@ -1349,10 +1349,10 @@ async function renderCal(){
   const lead = (first.getUTCDay() + 6) % 7, days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const phases = keyPhaseDays(y, m), todayKey = localKey(new Date());
   fillWxTowns(); const wxd = wxByDate();
-  const allV = (tides?.ev || []).map(e => e.v), mLo = allV.length ? Math.min(...allV) : 0, mHi = allV.length ? Math.max(...allV) : 1;
   let tides = null;
   try { tides = await monthTides(calStation.value, y, m); } catch(e){}
   if (calState.y !== y || calState.m !== m) return;   // user moved on
+  const allV = (tides?.ev || []).map(e => e.v), mLo = allV.length ? Math.min(...allV) : 0, mHi = allV.length ? Math.max(...allV) : 1;
   // range per day, to flag the biggest tides of the month
   const ranges = [];
   let html = WD.map(d => `<div class="cal-h">${d}</div>`).join('') + '<div class="cal-c empty"></div>'.repeat(lead);
