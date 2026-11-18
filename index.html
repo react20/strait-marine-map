@@ -1295,7 +1295,7 @@ calStation.addEventListener('change', () => { try { localStorage.setItem('cal-st
 const calWx = document.getElementById('cal-wx');
 function fillWxTowns(){
   const cur = calWx.value || (() => { try { return localStorage.getItem('cal-wx'); } catch(e){ return null; } })();
-  calWx.innerHTML = wxData.map(t => `<option>${esc2(t.name)}</option>`).join('') || '<option value="">Weather loading…</option>';
+  calWx.innerHTML = wxData.map(t => `<option value="${esc2(t.name)}">Weather: ${esc2(t.name)}</option>`).join('') || '<option value="">Weather loading…</option>';
   if (cur && wxData.some(t => t.name === cur)) calWx.value = cur;
   else { const near = calStation.value === '07917' ? 'Nanaimo' : 'West Vancouver'; if (wxData.some(t => t.name === near)) calWx.value = near; }
 }
