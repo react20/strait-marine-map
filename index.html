@@ -220,6 +220,8 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .cal-c .mini{height:70px}
 .cal-c .wv4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));font:600 9px var(--mono);text-align:center;border-bottom:1px solid var(--line);padding:1px 0 2px;min-height:13px}
 .cal-c .wv.c{color:#2f9e44}.cal-c .wv.w{color:#f08c00}.cal-c .wv.x{color:#e03131}
+.cal-c .bk .noic{display:block;width:13px;height:12px}
+.cal-c .bk .wi{min-height:9px}
 .sos-card.pan{border-top-color:#e8890c}
 .sos-tabs .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sos-tabs .tabs button{font:700 14px var(--sans);padding:10px 6px;border:2px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer;line-height:1.25}
@@ -1409,7 +1411,7 @@ function blockWeather(key, b, wxd){
 }
 function blocksHTML(key, wxd){
   return `<span class="b4">${[0,1,2,3].map(b => { const w = blockWeather(key, b, wxd);
-    return `<span class="bk" data-key="${key}" data-b="${b}" title="${BLOCK_NAMES[b]}${w ? ': ' + esc2(w.text) : ''}"><span class="wd"></span>${w ? `<span class="wi">${w.temp != null ? `<b>${w.temp}°</b>` : ''}${w.icon ? `<img src="${w.icon}" alt="">` : ''}</span>` : ''}</span>`; }).join('')}</span>`;
+    return `<span class="bk" data-key="${key}" data-b="${b}" title="${BLOCK_NAMES[b]}${w ? ': ' + esc2(w.text) : ''}">${w?.icon ? `<img src="${w.icon}" alt="">` : '<i class="noic"></i>'}<span class="wi">${w?.temp != null ? `<b>${w.temp}°</b>` : ''}</span><span class="wd"></span></span>`; }).join('')}</span>`;
 }
 // Open-water points used for the calendar's wind and wave estimates, just off each tide station
 const CAL_POINTS = {'07795': {lat:49.31, lon:-123.30}, '07917': {lat:49.205, lon:-123.80}};
@@ -1486,8 +1488,6 @@ async function renderCal(){
     const p = moonPhase(Date.UTC(y, m, d, 20));
     html += `<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
       `<span class="top">${d}${moonSVG(p, 16)}</span>` +
-        (wxd[key] ? (() => { const e = wxd[key], main = e.d || e.n, hi = tempOf(e.d,'high'), lo = tempOf(e.n,'low'), pop = popOf(e.d) ?? popOf(e.n), ic = main?.abbreviatedForecast?.icon?.url;
-        return `<span class="wx" title="${esc2(main?.abbreviatedForecast?.textSummary?.en || '')}">${ic ? `<img src="${ic}" alt="">` : ''}${hi != null ? hi + '°' : ''}${lo != null ? `<span class="lo">/${lo}°</span>` : ''}${pop ? ` <span class="pop">${pop}%</span>` : ''}</span>`; })() : '') +
       (phases[key] ? `<span class="ph">${phases[key]}</span>` : '') +
       (tides ? `<span class="tide-grp"><span class="mini">${miniTide(localMidnight(new Date(Date.UTC(y, m, d, 20))), tides.ev, mLo, mHi)}${blocksHTML(key, wxd)}</span><span class="wv4">${[0,1,2,3].map(b => `<span class="wv" data-key="${key}" data-b="${b}"></span>`).join('')}</span>` : '') +
       (ev.length ? ev.map(e => `<span class="tt ${e.high ? 'hi' : 'lo'}" title="${e.high ? 'High' : 'Low'} ${fmt(e.t,{hour:'numeric',minute:'2-digit'})}, ${e.v.toFixed(1)} m"><i>${e.high ? '▲' : '▼'}</i>${shortTime(e.t)} <em>${e.v.toFixed(1)}</em></span>`).join('') : (tides ? '<span class="tt">–</span>' : '')) + (tides ? '</span>' : '') +
