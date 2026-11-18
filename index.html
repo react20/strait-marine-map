@@ -1821,6 +1821,25 @@ function wxPeriods(props){
 }
 const tempOf = (p, cls) => p?.temperatures?.temperature?.find(t => t.class?.en === cls)?.value?.en;
 const popOf = p => p?.abbreviatedForecast?.pop?.value?.en ?? p?.abbreviatedForecast?.pop?.en;
+// Picking a day also moves the wind and wave layers: now for today, 2 pm local for later days
+function wxDayToTime(dayName, isFirst){
+  let hrs = 0;
+  if (!isFirst){
+    const now = Date.now();
+    for (let off = 1; off < 9; off++){
+      const d = new Date(now + off*864e5);
+      if (d.toLocaleDateString('en-CA', {timeZone:CONFIG.tz, weekday:'long'}) === dayName){
+        const t = localMidnight(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 20))) + 14*3600e3;
+        const base = new Date(); base.setUTCMinutes(0,0,0);
+        hrs = Math.round((t - base) / 3600e3);
+        break;
+      }
+    }
+  }
+  if (hrs > +fhour.max){ fhour.max = 168; fhour.step = 3; }
+  fhour.value = Math.max(0, Math.min(+fhour.max, Math.round(hrs / +fhour.step) * +fhour.step));
+  applyTime();
+}
 function drawWx(){
   wxLayer.clearLayers();
   const bar = document.getElementById('wxdays');
@@ -1829,7 +1848,8 @@ function drawWx(){
   const dayNames = wxData[0].days.map(x => x.day);
   if (!dayNames.includes(wxDay)) wxDay = dayNames[0];
   bar.innerHTML = dayNames.map((d, i) => `<button type="button" aria-pressed="${d === wxDay}" data-d="${esc2(d)}">${i === 0 ? (wxData[0].days[0].d ? 'Today' : 'Tonight') : esc2(d.slice(0,3))}</button>`).join('');
-  bar.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { wxDay = b.dataset.d; drawWx(); }));
+  bar.querySelectorAll('button').forEach((b, i) => { b.title = i === 0 ? 'Weather today · wind and waves now' : `Weather ${b.dataset.d} · wind and waves at 2 pm`;
+    b.addEventListener('click', () => { wxDay = b.dataset.d; drawWx(); wxDayToTime(b.dataset.d, i === 0); }); });
   for (const t of wxData){
     const e = t.days.find(x => x.day === wxDay); if (!e) continue;
     const main = e.d || e.n, hi = tempOf(e.d, 'high'), lo = tempOf(e.n, 'low'), pop = popOf(e.d) ?? popOf(e.n);
