@@ -251,9 +251,9 @@ a{color:var(--pin)}
     </details>
 
     <details class="pane" data-pane="tides2">
-      <summary><h2>Tides · next 48 h</h2><button type="button" class="calbtn" id="calbtn">Calendar</button></summary>
+      <summary><h2>Tides · today</h2><button type="button" class="calbtn" id="calbtn">Calendar</button></summary>
       <div id="tides"><p class="note">Loading tide predictions…</p></div>
-      <p class="note">Heights in metres · shaded = night · orange = sunrise and sunset · red = now</p>
+      <p class="note">Today 00:00–23:59 · heights in metres · shaded = night · orange = sunrise and sunset · red = now</p>
     </details>
 
     <details class="pane" data-pane="marine">
@@ -665,8 +665,16 @@ const tideBox = document.getElementById('tides');
 const tideMarkers = L.layerGroup();
 const setTideStatus = addOverlay('tide','Tide stations','Next high and low on the map', tideMarkers);
 const tideCurves = {};
+// Local midnight at the start of the day containing d (in the map's time zone)
+function localMidnight(d){
+  const key = d.toLocaleDateString('en-CA', {timeZone:CONFIG.tz});
+  const hr = new Intl.DateTimeFormat('en-CA', {timeZone:CONFIG.tz, hour:'numeric', hourCycle:'h23'});
+  let t = Math.floor(d.getTime() / 3600e3) * 3600e3 - 30*3600e3;
+  while (!(d.toLocaleDateString && new Date(t).toLocaleDateString('en-CA', {timeZone:CONFIG.tz}) === key && +hr.format(new Date(t)) === 0)) t += 3600e3;
+  return t;
+}
 async function loadTides(){
-  const from = new Date(), to = new Date(from.getTime() + 48*3600e3);
+  const now = new Date(), dayStart = localMidnight(now), from = new Date(dayStart), to = new Date(now.getTime() + 48*3600e3);
   const iso = d => d.toISOString().replace(/\.\d{3}Z$/,'Z');
   tideBox.innerHTML = ''; let okCount = 0;
   for (const s of CONFIG.tideStations){
@@ -687,9 +695,12 @@ async function loadTides(){
         const high = prev!=null ? v>prev : v>next;
         return {t:new Date(p.eventDate), v, high};
       });
-      const line = ev.slice(0,6).map(x => `${x.high?'H':'L'} ${fmt(x.t,{weekday:'short',hour:'numeric',minute:'2-digit'})}  ${x.v.toFixed(1)} m`).join('<br>');
-      el.innerHTML = `<b>${s.name}</b><span class="ev">${s.near}</span>${sparkline(curve, st.latitude, st.longitude, ev)}<span class="ev">${line || 'No predictions returned'}</span>`;
-      const n = ev[0];
+      const upcoming = ev.filter(x => x.t >= now);
+      const dayPts = (curve||[]).filter(p => { const t = Date.parse(p.eventDate); return t >= dayStart && t <= dayStart + 864e5; });
+      const dayEv = ev.filter(x => x.t.getTime() >= dayStart && x.t.getTime() < dayStart + 864e5);
+      const line = upcoming.slice(0,6).map(x => `${x.high?'H':'L'} ${fmt(x.t,{weekday:'short',hour:'numeric',minute:'2-digit'})}  ${x.v.toFixed(1)} m`).join('<br>');
+      el.innerHTML = `<b>${s.name}</b><span class="ev">${s.near}</span>${sparkline(dayPts, st.latitude, st.longitude, dayEv, {t0:dayStart, t1:dayStart + 864e5 - 60e3})}<span class="ev">${line || 'No predictions returned'}</span>`;
+      const n = upcoming[0];
       if (n) L.circleMarker([st.latitude, st.longitude], {radius:7, color:'#fff', weight:2, fillColor:'#1e7d4f', fillOpacity:1})
         .bindTooltip(`${s.name} · next ${n.high?'high':'low'} ${fmt(n.t,{hour:'numeric',minute:'2-digit'})} ${n.v.toFixed(1)} m`, {permanent:true, direction:'bottom', offset:[0,6], className:'lbl'})
         .addTo(tideMarkers);
@@ -700,10 +711,10 @@ async function loadTides(){
   }
   setTideStatus(okCount ? 'ok':'bad', okCount ? 'live':'failed');
 }
-function sparkline(pts, lat, lon, events){
+function sparkline(pts, lat, lon, events, range){
   if (!pts?.length) return '';
   const W=320, H=64, vs=pts.map(p=>p.value), lo=Math.min(...vs), hi=Math.max(...vs);
-  const t0=new Date(pts[0].eventDate).getTime(), t1=new Date(pts[pts.length-1].eventDate).getTime();
+  const t0 = range ? range.t0 : new Date(pts[0].eventDate).getTime(), t1 = range ? range.t1 : new Date(pts[pts.length-1].eventDate).getTime();
   const x=t=>((t-t0)/(t1-t0||1))*W, y=v=>H-14-((v-lo)/(hi-lo||1))*(H-28);   // 14 px room above and below for labels
   const d = pts.map((p,i)=>`${i?'L':'M'}${x(new Date(p.eventDate).getTime()).toFixed(1)},${y(p.value).toFixed(1)}`).join('');
   // High / low heights
@@ -728,7 +739,16 @@ function sparkline(pts, lat, lon, events){
       if (t > t0 && t < t1) lines += `<line x1="${x(t).toFixed(1)}" y1="0" x2="${x(t).toFixed(1)}" y2="${H}" stroke="var(--warn)" stroke-width="1" stroke-dasharray="3 2" vector-effect="non-scaling-stroke"><title>${kind} ${fmt(new Date(t),{weekday:'short',hour:'numeric',minute:'2-digit'})}</title></line>`;
     // local midnights
     const hr = new Intl.DateTimeFormat('en-CA', {timeZone:CONFIG.tz, hour:'numeric', hourCycle:'h23'});
-    for (let t = Math.ceil(t0/3600e3)*3600e3; t < t1; t += 3600e3){
+    const oneDay = t1 - t0 <= 26*3600e3;
+    if (oneDay){
+      // hour marks every 6 h, labelled 00:00 … 23:59
+      for (let t = Math.ceil(t0/3600e3)*3600e3; t <= t1; t += 3600e3){
+        const h = +hr.format(new Date(t));
+        if (h % 6 === 0 && t > t0 + 1) lines += `<line x1="${x(t).toFixed(1)}" y1="0" x2="${x(t).toFixed(1)}" y2="${H}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+      }
+      labels += ['00:00','06:00','12:00','18:00','23:59'].map((l, i) => `<span class="tl" style="left:${(i*25).toFixed(1)}%;transform:translateX(${i === 0 ? '0' : i === 4 ? '-100%' : '-50%'})">${l}</span>`).join('');
+    }
+    for (let t = Math.ceil(t0/3600e3)*3600e3; !oneDay && t < t1; t += 3600e3){
       if (+hr.format(new Date(t)) === 0){
         lines += `<line x1="${x(t).toFixed(1)}" y1="0" x2="${x(t).toFixed(1)}" y2="${H}" stroke="var(--muted)" stroke-width="1" vector-effect="non-scaling-stroke"><title>Midnight</title></line>`;
         labels += `<span class="tl" style="left:${(x(t)/W*100).toFixed(1)}%">${fmt(new Date(t + 3600e3),{weekday:'short'})}</span>`;
@@ -737,7 +757,7 @@ function sparkline(pts, lat, lon, events){
   }
   return `<div class="tc"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Tide curve, ${lo.toFixed(1)} to ${hi.toFixed(1)} m, with sunrise, sunset and midnight marked">
     ${night}<path d="${d}L${W},${H}L0,${H}Z" fill="var(--pin)" opacity=".15"/><path d="${d}" fill="none" stroke="var(--pin)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
-    ${lines}<line x1="1" y1="0" x2="1" y2="${H}" stroke="var(--accent)" stroke-width="2"/></svg>${depth}${labels ? `<div class="tls">${labels}</div>` : ''}</div>`;
+    ${lines}${Date.now() >= t0 && Date.now() <= t1 ? `<line x1="${x(Date.now()).toFixed(1)}" y1="0" x2="${x(Date.now()).toFixed(1)}" y2="${H}" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"><title>Now</title></line>` : ''}</svg>${depth}${labels ? `<div class="tls">${labels}</div>` : ''}</div>`;
 }
 loadTides();
 
@@ -1320,9 +1340,7 @@ async function renderDay(){
     const curve = await (await fetch(`${CONFIG.iwls}/stations/${st.id}/data?time-series-code=wlp&from=${iso(t0)}&to=${iso(t0 + 864e5)}&resolution=FIFTEEN_MINUTES`)).json();
     if (calState.sel !== key) return;
     const el = document.getElementById('cal-curve');
-    el.innerHTML = sparkline(curve, st.lat, st.lon, ev);
-    // the red "now" line on the left only makes sense for today
-    if (key !== localKey(new Date())) el.querySelector('svg line[stroke="var(--accent)"]')?.remove();
+    el.innerHTML = sparkline(curve, st.lat, st.lon, ev, {t0, t1:t0 + 864e5 - 60e3});
   } catch(e){ document.getElementById('cal-curve').innerHTML = '<p class="note">Couldn\'t load the tide curve.</p>'; }
 }
 function openCal(){
