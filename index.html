@@ -172,6 +172,15 @@ details.pane .file{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
 details.pane.time[open]{display:flex;flex-direction:column;gap:6px}
 details.pane.time[open]>summary{margin-bottom:2px}
 details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px}
+.wxdays{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(30px + env(safe-area-inset-bottom,0px));z-index:620;display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px;box-shadow:0 2px 6px rgba(0,0,0,.25);max-width:calc(100% - 20px);overflow-x:auto}
+.wxdays button{font:600 12px var(--sans);padding:5px 9px;border:1px solid transparent;border-radius:4px;background:none;color:var(--fg);cursor:pointer;white-space:nowrap}
+.wxdays button[aria-pressed="true"]{background:var(--pin);color:#fff}
+.wxm{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 6px 2px 2px;display:flex;align-items:center;gap:3px;box-shadow:0 1px 4px rgba(0,0,0,.3);white-space:nowrap;font:600 12px var(--sans);color:var(--fg)}
+.wxm img{width:30px;height:26px;object-fit:contain}
+.wxm .lo{color:var(--muted);font-weight:400}.wxm .pop{color:var(--pin);font-size:10px;margin-left:2px}
+.wxm small{display:block;font:500 9px var(--sans);color:var(--muted);line-height:1}
+.wxpop b{display:block;margin-top:4px}.wxpop p{margin:2px 0 0;font-size:12px;max-width:260px;white-space:normal}
+@media (max-width:760px){.wxdays{bottom:calc(104px + env(safe-area-inset-bottom,0px))}}
 .sos-card.pan{border-top-color:#e8890c}
 .sos-tabs .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sos-tabs .tabs button{font:700 14px var(--sans);padding:10px 6px;border:2px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer;line-height:1.25}
@@ -217,7 +226,7 @@ a{color:var(--pin)}
         <div class="vr wx"><b>WX1</b><span>Weather broadcast · Texada Island transmitter</span></div>
         <div class="vr wx"><b>21B</b><span>Weather broadcast · Mount Parke, Mayne Island</span></div>
       </div>
-      <p class="note" style="margin-top:6px">Check the Coast Guard's Radio Aids to Marine Navigation before relying on these.</p></div><button type="button" class="locbtn" id="locbtn" aria-pressed="false">My location</button><div class="readout" id="readout">Tap the water for wind and waves at that spot</div></div>
+      <p class="note" style="margin-top:6px">Check the Coast Guard's Radio Aids to Marine Navigation before relying on these.</p></div><div class="wxdays" id="wxdays" hidden></div><button type="button" class="locbtn" id="locbtn" aria-pressed="false">My location</button><div class="readout" id="readout">Tap the water for wind and waves at that spot</div></div>
   <aside>
     <div>
       <div class="acct" id="acct" hidden><button type="button" class="gbtn" id="gsign">Sign in with Google</button><span class="acct-who" id="acct-who"></span><button type="button" class="linkbtn" id="gout" hidden>Sign out</button></div>
@@ -1368,6 +1377,57 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.get
     d.addEventListener('toggle', () => { try { localStorage.setItem('pane-' + d.dataset.pane, d.open ? '1' : '0'); } catch(e){} });
   });
 })();
+
+
+// ---------- 7-day weather forecast on the map (Environment Canada city forecasts) ----------
+const WX_TOWNS = /^(Nanaimo|Gibsons|Sechelt|Qualicum Beach|West Vancouver|Richmond|Vancouver)$/;
+const wxLayer = L.layerGroup();
+const setWxStatus = addOverlay('wx7', 'Weather forecast · 7 days', 'Environment Canada town forecasts: sky, temperature, chance of rain', wxLayer, true);
+let wxData = [], wxDay = null;
+function wxPeriods(props){
+  // Group the forecast periods into days: {day:'Wednesday', d:{...}, n:{...}}
+  const days = [];
+  for (const p of props.forecastGroup?.forecasts || []){
+    const v = p.period?.value?.en || p.period?.textForecastName?.en || '';
+    const night = /night/i.test(v) || /tonight/i.test(p.period?.textForecastName?.en || '');
+    const day = v.replace(/\s*night$/i, '');
+    let e = days.find(x => x.day === day); if (!e){ e = {day}; days.push(e); }
+    e[night ? 'n' : 'd'] = p;
+  }
+  return days;
+}
+const tempOf = (p, cls) => p?.temperatures?.temperature?.find(t => t.class?.en === cls)?.value?.en;
+const popOf = p => p?.abbreviatedForecast?.pop?.value?.en ?? p?.abbreviatedForecast?.pop?.en;
+function drawWx(){
+  wxLayer.clearLayers();
+  const bar = document.getElementById('wxdays');
+  bar.hidden = !map.hasLayer(wxLayer) || !wxData.length;
+  if (bar.hidden) return;
+  const dayNames = wxData[0].days.map(x => x.day);
+  if (!dayNames.includes(wxDay)) wxDay = dayNames[0];
+  bar.innerHTML = dayNames.map((d, i) => `<button type="button" aria-pressed="${d === wxDay}" data-d="${esc2(d)}">${i === 0 ? (wxData[0].days[0].d ? 'Today' : 'Tonight') : esc2(d.slice(0,3))}</button>`).join('');
+  bar.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { wxDay = b.dataset.d; drawWx(); }));
+  for (const t of wxData){
+    const e = t.days.find(x => x.day === wxDay); if (!e) continue;
+    const main = e.d || e.n, hi = tempOf(e.d, 'high'), lo = tempOf(e.n, 'low'), pop = popOf(e.d) ?? popOf(e.n);
+    const icon = main?.abbreviatedForecast?.icon?.url;
+    const html = `<div class="wxm">${icon ? `<img src="${icon}" alt="">` : ''}<span><small>${esc2(t.name)}</small>${hi != null ? hi + '°' : ''}${lo != null ? `<span class="lo"> / ${lo}°</span>` : ''}${pop ? `<span class="pop">${pop}%</span>` : ''}</span></div>`;
+    const pp = [e.d, e.n].filter(Boolean).map(p => `<b>${esc2(p.period?.textForecastName?.en || '')}</b><p>${esc2(p.textSummary?.en || '')}</p>`).join('');
+    L.marker(t.ll, {icon:L.divIcon({className:'', html, iconSize:null, iconAnchor:[0,14]}), keyboard:false})
+      .bindPopup(`<div class="wxpop"><b>${esc2(t.name)} · ${esc2(wxDay)}</b>${pp}</div>`).addTo(wxLayer);
+  }
+}
+async function loadWx(){
+  try {
+    const r = await (await fetch('https://api.weather.gc.ca/collections/citypageweather-realtime/items?f=json&lang=en&bbox=-124.9,49.09,-122.84,49.57&limit=30')).json();
+    wxData = (r.features || []).map(f => ({name: f.properties.name?.en || f.properties.name, ll: [f.geometry.coordinates[1], f.geometry.coordinates[0]], days: wxPeriods(f.properties)}))
+      .filter(t => WX_TOWNS.test(t.name) && t.days.length);
+    setWxStatus(wxData.length ? 'ok' : 'bad', wxData.length ? 'live' : 'failed');
+  } catch(e){ setWxStatus('bad', 'failed'); }
+  drawWx();
+}
+wxLayer.on('add remove', () => setTimeout(drawWx));
+loadWx(); setInterval(loadWx, 30*60e3);
 
 // ---------- Google sign-in: save settings to your account ----------
 const SYNC_KEYS = ['cal-station','sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta','sos-what-MAYDAY','sos-what-PAN','dlspot'];
