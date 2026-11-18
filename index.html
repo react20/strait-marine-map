@@ -1506,17 +1506,33 @@ async function modelWeather(loc, t, b){
   return {icon: code && ECI(code), temp: Math.round(temp), text: `${r6 >= 1.5 ? 'Rain likely' : r6 >= 0.4 ? 'Some rain' : 'Mostly dry'}, ${Math.round(temp)}°${r24 != null ? ', about ' + r24.toFixed(0) + ' mm that day' : ''} (ensemble average GEPS, a trend only)`};
 }
 // Measured weather for past blocks: Environment Canada climate stations near each tide station
-const OBS_STATIONS = {'07795': {id:'1106200', name:'Point Atkinson'}, '07917': {id:'1022689', name:'Entrance Island'}};
+const OBS_STATIONS = {'07795': {id:'1106200', name:'Point Atkinson', ll:[49.330, -123.265]}, '07917': {id:'1022689', name:'Entrance Island', ll:[49.209, -123.811]}};
 const obsCache = {};
 async function monthObs(code, y, m){
   const st = OBS_STATIONS[code]; if (!st) return [];
-  const k = `${st.id}-${y}-${m}`; if (obsCache[k]) return obsCache[k];
+  const k = `${st.id}-${y}-${m}`, c = obsCache[k];
+  if (c && (Date.now() - c.at < 20*60e3 || c.done)) return c.rows;
   const iso = d => d.toISOString().replace(/\.\d{3}Z$/,'Z');
   const from = new Date(Date.UTC(y, m, 1) - 864e5), to = new Date(Math.min(Date.now(), Date.UTC(y, m + 1, 1) + 864e5));
   if (from > to) return [];
   try {
     const j = await (await fetch(`https://api.weather.gc.ca/collections/climate-hourly/items?f=json&CLIMATE_IDENTIFIER=${st.id}&datetime=${iso(from)}/${iso(to)}&limit=1000&properties=UTC_DATE,TEMP,WIND_DIRECTION,WIND_SPEED,PRECIP_AMOUNT`)).json();
-    return obsCache[k] = (j.features || []).map(f => { const p = f.properties; return {t: Date.parse(p.UTC_DATE + 'Z'), temp: p.TEMP, dir: p.WIND_DIRECTION, kmh: p.WIND_SPEED, rain: p.PRECIP_AMOUNT}; });
+    const rows = (j.features || []).map(f => { const p = f.properties; return {t: Date.parse(p.UTC_DATE + 'Z'), temp: p.TEMP, dir: p.WIND_DIRECTION == null ? null : p.WIND_DIRECTION * 10, kmh: p.WIND_SPEED, rain: p.PRECIP_AMOUNT}; });
+    // The climate archive runs several hours behind: fill the latest hours from the live station feed (SWOB)
+    const last = rows.length ? Math.max(...rows.map(r => r.t)) : from.getTime();
+    if (to - last > 90*60e3 && Date.now() - to < 864e5){
+      const s0 = new Date(Math.max(last + 30*60e3, Date.now() - 3*864e5));
+      const [la, lo] = st.ll;
+      try {
+        const sj = await (await fetch(`https://api.weather.gc.ca/collections/swob-realtime/items?f=json&bbox=${lo-0.03},${la-0.03},${lo+0.03},${la+0.03}&datetime=${iso(s0)}/${iso(new Date())}&limit=6000&properties=date_tm-value,air_temp,avg_wnd_spd_10m_pst1hr,avg_wnd_dir_10m_pst1hr,pcpn_amt_pst1hr`)).json();
+        const seen = new Set();
+        for (const f of sj.features || []){ const p = f.properties, t = Date.parse(p['date_tm-value']);
+          if (!t || t % 3600e3 || seen.has(t) || t <= last) continue; seen.add(t);
+          rows.push({t, temp: p.air_temp ?? null, dir: p.avg_wnd_dir_10m_pst1hr ?? null, kmh: p.avg_wnd_spd_10m_pst1hr ?? null, rain: p.pcpn_amt_pst1hr ?? null}); }
+      } catch(e){}
+    }
+    obsCache[k] = {rows, at: Date.now(), done: to.getTime() < Date.now() - 2*864e5};
+    return rows;
   } catch(e){ return []; }
 }
 function obsBlock(obs, t0){
@@ -1527,7 +1543,7 @@ function obsBlock(obs, t0){
   let wind = null;
   if (W.length){
     const kn = W.reduce((s, h) => s + h.kmh, 0) / W.length / 1.852;
-    const x = W.reduce((s, h) => s + h.kmh * Math.sin(h.dir * 10 * Math.PI / 180), 0), y = W.reduce((s, h) => s + h.kmh * Math.cos(h.dir * 10 * Math.PI / 180), 0);
+    const x = W.reduce((s, h) => s + h.kmh * Math.sin(h.dir * Math.PI / 180), 0), y = W.reduce((s, h) => s + h.kmh * Math.cos(h.dir * Math.PI / 180), 0);
     const gust = Math.max(...W.map(h => h.kmh)) / 1.852;
     wind = {kn, dir: (Math.atan2(x, y) * 180 / Math.PI + 360) % 360, max: gust};
   }
@@ -1565,7 +1581,7 @@ async function loadBlockWinds(y, m, days, st){
       const sname = OBS_STATIONS[code]?.name || 'station';
       for (const j of pastJobs){
         const o = obsBlock(obs, j.t0), bk = document.querySelector(`.bk[data-key="${j.key}"][data-b="${j.b}"]`); if (!bk) continue;
-        if (!o){ if (j.t0 > Date.now() - 2*864e5) bk.title = `${BLOCK_NAMES[j.b]}: measurements from ${sname} not published yet (they arrive a few hours late)`; continue; }
+        if (!o){ if (j.t0 > Date.now() - 2*864e5) bk.title = `${BLOCK_NAMES[j.b]}: no measurements from ${sname} yet`; continue; }
         const ic = o.rain >= 1 ? '12' : o.rain >= 0.2 ? (j.b === 1 || j.b === 2 ? '06' : '36') : null;
         if (ic) bk.querySelector('i.noic')?.replaceWith(Object.assign(document.createElement('img'), {src: ECI(ic), alt: ''}));
         if (o.temp != null) bk.querySelector('.wi').innerHTML = `<b>${o.temp}°</b>`;
