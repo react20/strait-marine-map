@@ -78,9 +78,9 @@ section{display:flex;flex-direction:column}
 .tc{position:relative}
 .tide .tc svg{height:64px}
 .tv{position:absolute;transform:translate(-50%,-115%);font:600 10px var(--mono);color:var(--pin);pointer-events:auto;white-space:nowrap;text-shadow:0 0 2px var(--panel),0 0 2px var(--panel)}
-.tv.lo{transform:translate(-50%,15%);color:var(--muted)}
+.tv.lo{transform:translate(-50%,8%);color:var(--muted)}
 .ty{position:absolute;right:0;transform:translateY(-50%);font:9px var(--mono);color:var(--muted);text-shadow:0 0 2px var(--panel)}
-.tls{position:relative;height:13px}
+.tls{position:relative;height:13px;margin-top:3px}
 .tl{position:absolute;transform:translateX(3px);font:10px var(--mono);color:var(--muted);white-space:nowrap}
 .vhf{display:flex;flex-direction:column}
 .vr{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px}
@@ -715,7 +715,7 @@ function sparkline(pts, lat, lon, events, range){
   if (!pts?.length) return '';
   const W=320, H=64, vs=pts.map(p=>p.value), lo=Math.min(...vs), hi=Math.max(...vs);
   const t0 = range ? range.t0 : new Date(pts[0].eventDate).getTime(), t1 = range ? range.t1 : new Date(pts[pts.length-1].eventDate).getTime();
-  const x=t=>((t-t0)/(t1-t0||1))*W, y=v=>H-14-((v-lo)/(hi-lo||1))*(H-28);   // 14 px room above and below for labels
+  const x=t=>((t-t0)/(t1-t0||1))*W, y=v=>H-17-((v-lo)/(hi-lo||1))*(H-31);   // 14 px room above and below for labels
   const d = pts.map((p,i)=>`${i?'L':'M'}${x(new Date(p.eventDate).getTime()).toFixed(1)},${y(p.value).toFixed(1)}`).join('');
   // High / low heights
   let depth = '';
