@@ -1348,8 +1348,8 @@ async function renderCal(){
   const {y, m} = calState, grid = document.getElementById('cal-grid');
   const first = new Date(Date.UTC(y, m, 1, 20));
   document.getElementById('cal-month').textContent = first.toLocaleDateString('en-CA', {month:'long', year:'numeric', timeZone:'UTC'});
-  const WD = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const lead = (first.getUTCDay() + 6) % 7, days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const lead = first.getUTCDay(), days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const phases = keyPhaseDays(y, m), todayKey = localKey(new Date());
   fillWxTowns(); const wxd = wxByDate();
   let tides = null;
