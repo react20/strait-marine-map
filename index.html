@@ -330,6 +330,16 @@ L.control.scale({imperial:true, metric:true, maxWidth:160}).addTo(map);
 // ---------- Base maps ----------
 map.createPane('base').style.zIndex = 150;   // base maps always sit under the overlays
 const esri = p => `https://server.arcgisonline.com/ArcGIS/rest/services/${p}/MapServer/tile/{z}/{y}/{x}`;
+// Official electronic navigational charts (ENC) drawn with IHO S-52 symbols and colours, like a ship's ECDIS
+const ChartTiles = L.TileLayer.extend({
+  initialize(url, opts){ this.base = url; L.TileLayer.prototype.initialize.call(this, '', opts); },
+  getTileUrl(c){
+    const b = this._tileCoordsToBounds(c), crs = this._map.options.crs;
+    const sw = crs.project(b.getSouthWest()), ne = crs.project(b.getNorthEast());
+    return `${this.base}/export?bbox=${sw.x},${sw.y},${ne.x},${ne.y}&bboxSR=3857&imageSR=3857&size=256,256&format=png&transparent=false&dpi=96&f=image`;
+  }
+});
+const CHS_ENC = 'https://egisp.dfo-mpo.gc.ca/arcgis/rest/services/chs/ENC_MaritimeChartService/MapServer/exts/MaritimeChartService/MapServer';
 const bases = {
   'Ocean depth': L.layerGroup([
     L.tileLayer(esri('Ocean/World_Ocean_Base'), {maxNativeZoom:13, maxZoom:20, pane:'base', attribution:'Esri, GEBCO, NOAA, CHS'}),
@@ -340,6 +350,7 @@ const bases = {
     L.tileLayer.wms(CONFIG.nonna, {layers:CONFIG.nonnaLayer, styles:'raster', format:'image/png', transparent:true, version:'1.3.0', maxZoom:20, pane:'base', opacity:0.85, attribution:'Canadian Hydrographic Service'}),
     L.tileLayer(esri('Ocean/World_Ocean_Reference'), {maxNativeZoom:13, maxZoom:20, pane:'base'})
   ]),
+  'Nautical chart': new ChartTiles(CHS_ENC, {maxZoom:20, pane:'base', attribution:'Canadian Hydrographic Service ENC · not for navigation'}),
   'Satellite': L.tileLayer(esri('World_Imagery'), {maxNativeZoom:19, maxZoom:20, pane:'base', attribution:'Esri, Maxar'})
 };
 let currentBase = bases['Ocean depth'].addTo(map);
