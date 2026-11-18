@@ -1786,8 +1786,7 @@ function drawWx(){
   for (const t of wxData){
     const e = t.days.find(x => x.day === wxDay); if (!e) continue;
     const main = e.d || e.n, hi = tempOf(e.d, 'high'), lo = tempOf(e.n, 'low'), pop = popOf(e.d) ?? popOf(e.n);
-    const icon = main?.abbreviatedForecast?.icon?.url;
-    const html = `<div class="wxm">${icon ? `<img src="${icon}" alt="">` : ''}<span><small>${esc2(t.name)}</small>${hi != null ? hi + '°' : ''}${lo != null ? `<span class="lo"> / ${lo}°</span>` : ''}${pop ? `<span class="pop">${pop}%</span>` : ''}</span></div>`;
+    const html = `<div class="wxm"><span><small>${esc2(t.name)}</small>${hi != null ? hi + '°' : ''}${lo != null ? `<span class="lo"> / ${lo}°</span>` : ''}${pop ? `<span class="pop">${pop}%</span>` : ''}</span></div>`;
     const pp = [e.d, e.n].filter(Boolean).map(p => `<b>${esc2(p.period?.textForecastName?.en || '')}</b><p>${esc2(p.textSummary?.en || '')}</p>`).join('');
     L.marker(t.ll, {icon:L.divIcon({className:'', html, iconSize:null, iconAnchor:[0,14]}), keyboard:false})
       .bindPopup(`<div class="wxpop"><b>${esc2(t.name)} · ${esc2(wxDay)}</b>${pp}</div>`).addTo(wxLayer);
