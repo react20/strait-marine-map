@@ -532,6 +532,7 @@ function applyTime(){
   const t = new Date(base.getTime() + (+fhour.value)*3600e3);
   const hrs = +fhour.value, ahead = hrs === 0 ? 'Now' : hrs < 48 ? `+${hrs} h` : `+${Math.floor(hrs/24)} d ${hrs%24 ? hrs%24 + ' h' : ''}`.trim();
   ftime.textContent = `${ahead} · ` + fmt(t,{weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+  const lw = document.querySelector('#leg-wind b'); if (lw) lw.textContent = 'Wind · knots' + (hrs === 0 ? ' · now' : ' · ' + fmt(t, {weekday:'short', hour:'numeric'}));
   const model = modelFor(t);
   document.getElementById('fmodel').textContent = 'Wind model: ' + model.label + (wx.wave && map.hasLayer(wx.wave.layer) ? ' · Waves: global 25 km model' : '');
   if (wx.wind && wx.wind.name !== model.speed){
