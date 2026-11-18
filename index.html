@@ -222,7 +222,8 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .cal-c .wv.c{color:#2f9e44}.cal-c .wv.w{color:#f08c00}.cal-c .wv.x{color:#e03131}
 .cal-c .bk .noic{display:block;width:13px;height:12px}
 .cal-c .bk .wi{min-height:9px}
-.cal-c .past,.cal-c .past .wd{opacity:.5;filter:grayscale(1)}.cal-c .wd.so .n{font-style:italic}
+.cal-c .past,.cal-c .past .wd{opacity:.5;filter:grayscale(1)}
+.cal-c.pastday .mini svg,.cal-c.pastday .tt,.cal-c.pastday .top svg{opacity:.5;filter:grayscale(1)}.cal-c.pastday .top{opacity:.6}.cal-c .wd.so .n{font-style:italic}
 .cal-tide{font-size:13px;color:var(--muted);padding:6px 4px;white-space:nowrap}
 .cal-bar #cal-wx{margin-left:auto}
 .sos-card.pan{border-top-color:#e8890c}
@@ -1408,7 +1409,7 @@ function miniTide(dayStart, ev, lo, hi){
     const rate = Math.abs(pts[i][1] - pts[i-1][1]) / ((pts[i][0] - pts[i-1][0]) / 3600e3);   // metres per hour
     segs += `<path d="M${x(pts[i-1][0]).toFixed(1)},${y(pts[i-1][1]).toFixed(1)}L${x(pts[i][0]).toFixed(1)},${y(pts[i][1]).toFixed(1)}" stroke="${currentColour(rate)}" stroke-width="2.2" fill="none" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`;
   }
-  const now = Date.now(), nowLine = now >= dayStart && now < t1 ? `<line x1="${x(now).toFixed(1)}" y1="0" x2="${x(now).toFixed(1)}" y2="${H}" stroke="var(--accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>` : '';
+  const now = Date.now(), nowLine = now >= dayStart && now < t1 ? `<rect x="0" y="0" width="${x(now).toFixed(1)}" height="${H}" fill="var(--panel)" opacity=".55"/><line x1="${x(now).toFixed(1)}" y1="0" x2="${x(now).toFixed(1)}" y2="${H}" stroke="var(--accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>` : '';
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${[25,50,75].map(q => `<line x1="${q}" y1="0" x2="${q}" y2="${H}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join('')}<path d="${d}L${W},${H}L0,${H}Z" fill="var(--pin)" opacity=".16"/>${segs}${nowLine}</svg>`;
 }
 // Four 6-hour blocks per day: 00–06, 06–12, 12–18, 18–24
@@ -1602,7 +1603,7 @@ async function renderCal(){
     const range = hi.length && lo.length ? Math.max(...hi) - Math.min(...lo) : null;
     if (range != null) ranges.push(range);
     const p = moonPhase(Date.UTC(y, m, d, 20));
-    html += `<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
+    html += `<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key < todayKey ? ' pastday' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
       `<span class="top" title="${phases[key] || moonName(p)}">${d}${moonSVG(p, 16)}</span>` +
       (tides ? `<span class="tide-grp"><span class="mini">${miniTide(localMidnight(new Date(Date.UTC(y, m, d, 20))), tides.ev, mLo, mHi)}${blocksHTML(key, wxd)}</span><span class="wv4">${[0,1,2,3].map(b => `<span class="wv${blockStart(key, b) + 6*3600e3 <= Date.now() ? ' past' : ''}" data-key="${key}" data-b="${b}"></span>`).join('')}</span>` : '') +
       (ev.length ? ev.map(e => `<span class="tt ${e.high ? 'hi' : 'lo'}" title="${e.high ? 'High' : 'Low'} ${fmt(e.t,{hour:'numeric',minute:'2-digit'})}, ${e.v.toFixed(1)} m"><i>${e.high ? '▲' : '▼'}</i>${shortTime(e.t)} <em>${e.v.toFixed(1)}</em></span>`).join('') : (tides ? '<span class="tt">–</span>' : '')) + (tides ? '</span>' : '') +
