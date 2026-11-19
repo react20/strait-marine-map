@@ -188,6 +188,9 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .wxdays .wxctl select{font:600 12px var(--sans);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:2px}
 .wxdays .wkb{font-size:10px;display:flex;align-items:center;gap:3px;color:var(--muted);white-space:nowrap;cursor:pointer}
 .wxdays .wxd.pastd .dn{opacity:.6}
+.wxdays .visbtn{font:600 10px var(--sans);padding:2px 4px !important;background:none;border:1px solid var(--line);color:var(--muted)}
+.wxdays.novis .wxvis,.wxdays.novis .wxlab{display:none !important}
+.wxdays.novis .wxd{min-width:0 !important}
 .wxdays .wxd.wxlab{min-width:44px !important;position:sticky;left:64px;background:var(--panel);z-index:1}
 .wxdays .wxlab .dn-sp{display:block;height:36px}
 .wxdays .wxlab .mini.lab span:first-child,.wxdays .wxlab .mini.lab span:last-child{font-size:7px}
@@ -302,7 +305,12 @@ aside .cal-lab .lab,aside .cal-lab .tt{font-size:7.5px}
 .legendbox{position:absolute;right:10px;top:64px;z-index:500;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px;display:flex;flex-direction:column;gap:4px;max-height:calc(100% - 60px);overflow:auto}
 .legendbox b{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .legendbox img{display:block;background:#fff;border-radius:2px}
-#leg-wind img{height:220px;width:auto}
+#leg-wind img{height:110px;width:auto}
+.legendbox{padding:4px 6px !important}
+.legendbox b{font-size:9.5px !important;cursor:pointer;user-select:none;white-space:nowrap}
+.legendbox b::after{content:' ▾';opacity:.6}
+.legendbox .shut b::after{content:' ▸'}
+.legendbox .shut img{display:none}
 #leg-depth img{width:240px;height:auto;max-width:100%}
 .readout{position:absolute;left:10px;bottom:24px;z-index:500;background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:4px;font:12px var(--mono);font-variant-numeric:tabular-nums;max-width:calc(100% - 20px)}
 .file input{font:inherit;font-size:12px;max-width:100%}
@@ -312,7 +320,14 @@ a{color:var(--pin)}
 .leaflet-popup-content{margin:10px 12px;line-height:1.45;font-size:13px}
 .lbl{background:transparent;border:0;box-shadow:none;color:#0d1b24;font-weight:600;font-size:12px;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
 .lbl::before{display:none}
+/* Collapsible side panel */
+.panebtn{position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:900;width:22px;height:56px;padding:0;border:1px solid var(--line);border-right:0;border-radius:6px 0 0 6px;background:var(--panel);color:var(--fg);font:700 18px/1 var(--sans);cursor:pointer;box-shadow:-2px 0 6px rgba(0,0,0,.25)}
+.app.collapsed{grid-template-columns:1fr 0}
+.app.collapsed > aside{display:none}
+.app.collapsed .navbar{left:50% !important}
 @media (max-width:760px){
+  .panebtn{top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:none;width:auto;height:auto;padding:6px 10px;font-size:12px;border-right:1px solid var(--line);border-radius:6px;right:10px}
+  .app.collapsed{grid-template-rows:100vh 0}
   .app{grid-template-columns:1fr;grid-template-rows:65vh auto;height:auto}
   aside{border-left:0;border-top:1px solid var(--line);overflow:visible}
 }
@@ -320,7 +335,7 @@ a{color:var(--pin)}
 </head>
 <body>
 <div class="app">
-  <div class="mapwrap"><div id="map"></div><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind · knots</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar"><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button></div><div class="cal" id="cal" hidden role="dialog" aria-modal="true" aria-labelledby="cal-title"><div class="cal-card"><div class="cal-top"><h2 id="cal-title">Tide &amp; moon calendar</h2><button type="button" class="sos-x" id="cal-close">Close</button></div><div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-month"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><button type="button" class="linkbtn cal-pasttog" id="cal-pasttog" hidden></button><select id="cal-station" class="dlsel" aria-label="Tide station" hidden></select><select id="cal-wx" class="dlsel" aria-label="Weather for"></select><span class="cal-tide" id="cal-tide"></span></div><div class="cal-grid hidepast" id="cal-grid"></div><div class="cal-day" id="cal-day"></div><div class="cal-ins" id="cal-ins"></div><p class="note">Tide heights in metres above chart datum (lowest normal tide), from the Canadian Hydrographic Service. ▲ high (blue) and ▼ low tide, with time (24-hour) and height in metres. Moon phases are calculated and accurate to within about half a day. Each day's small chart is the tide from midnight to midnight (same scale all month). Its colour shows how fast the tide is changing, a guide to current strength: <b style="color:#e03131">red</b> strong (over 0.6 m/h), <b style="color:#f08c00">orange</b> moderate, <b style="color:#2f9e44">green</b> weak, near slack water. Each day is split into four 6-hour blocks (00–06, 06–12, 12–18, 18–24): each block shows the wind (arrow and knots: green under 10, orange 10–20, red over 20), then the temperature and weather icon, and under the tide curve the estimated wave height in metres (green under 0.5, orange 0.5–1, red over 1), for the next 14 days. Days 1–7 use Environment Canada's town forecast; days 8–10 the global model (GDPS); days 11–14 the ensemble average (GEPS), which gives wind speed without direction, so those days have no arrow or wave estimate. Past blocks are shown greyed out with what was actually measured at the nearest weather station (Point Atkinson or Entrance Island): temperature, wind, rain icon when rain fell, and waves estimated from that wind. Wind and waves are for open water just off the chosen tide station. Waves are estimated from the forecast wind and how far it blows over open water; no ocean swell reaches the inner Strait. Hover a block for details. Actual currents in passes can differ, so check CHS current tables for Gabriola Passage and other narrows. Hover a block to see where its numbers came from.</p></div></div><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="vhfbtn" id="vhfbtn" aria-expanded="false" aria-controls="vhfpop">VHF</button><div class="vhfpop" id="vhfpop" hidden><div class="vhfpop-top"><b>VHF channels</b><button type="button" class="linkbtn" id="vhfclose">Close</button></div><div class="rows vhf">
+  <div class="mapwrap"><div id="map"></div><button type="button" class="panebtn" id="panebtn" aria-label="Hide side panel" title="Hide side panel">›</button><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind kn</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar"><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button></div><div class="cal" id="cal" hidden role="dialog" aria-modal="true" aria-labelledby="cal-title"><div class="cal-card"><div class="cal-top"><h2 id="cal-title">Tide &amp; moon calendar</h2><button type="button" class="sos-x" id="cal-close">Close</button></div><div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-month"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><button type="button" class="linkbtn cal-pasttog" id="cal-pasttog" hidden></button><select id="cal-station" class="dlsel" aria-label="Tide station" hidden></select><select id="cal-wx" class="dlsel" aria-label="Weather for"></select><span class="cal-tide" id="cal-tide"></span></div><div class="cal-grid hidepast" id="cal-grid"></div><div class="cal-day" id="cal-day"></div><div class="cal-ins" id="cal-ins"></div><p class="note">Tide heights in metres above chart datum (lowest normal tide), from the Canadian Hydrographic Service. ▲ high (blue) and ▼ low tide, with time (24-hour) and height in metres. Moon phases are calculated and accurate to within about half a day. Each day's small chart is the tide from midnight to midnight (same scale all month). Its colour shows how fast the tide is changing, a guide to current strength: <b style="color:#e03131">red</b> strong (over 0.6 m/h), <b style="color:#f08c00">orange</b> moderate, <b style="color:#2f9e44">green</b> weak, near slack water. Each day is split into four 6-hour blocks (00–06, 06–12, 12–18, 18–24): each block shows the wind (arrow and knots: green under 10, orange 10–20, red over 20), then the temperature and weather icon, and under the tide curve the estimated wave height in metres (green under 0.5, orange 0.5–1, red over 1), for the next 14 days. Days 1–7 use Environment Canada's town forecast; days 8–10 the global model (GDPS); days 11–14 the ensemble average (GEPS), which gives wind speed without direction, so those days have no arrow or wave estimate. Past blocks are shown greyed out with what was actually measured at the nearest weather station (Point Atkinson or Entrance Island): temperature, wind, rain icon when rain fell, and waves estimated from that wind. Wind and waves are for open water just off the chosen tide station. Waves are estimated from the forecast wind and how far it blows over open water; no ocean swell reaches the inner Strait. Hover a block for details. Actual currents in passes can differ, so check CHS current tables for Gabriola Passage and other narrows. Hover a block to see where its numbers came from.</p></div></div><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="vhfbtn" id="vhfbtn" aria-expanded="false" aria-controls="vhfpop">VHF</button><div class="vhfpop" id="vhfpop" hidden><div class="vhfpop-top"><b>VHF channels</b><button type="button" class="linkbtn" id="vhfclose">Close</button></div><div class="rows vhf">
         <div class="vr em"><b>16</b><span>Distress, safety and calling · <i>*16</i> on a cell phone</span></div>
         <div class="vr"><b>83A</b><span>Coast Guard working channel</span></div>
         <div class="vr"><b>12</b><span>Vessel Traffic: Vancouver Harbour, English Bay, Howe Sound</span></div>
@@ -454,6 +469,28 @@ map.setMinZoom(map.getBoundsZoom(AREA.pad(0.08)));
 const HOME = [49.205, -123.245];
 map.setView(HOME, 11);
 window.addEventListener('load', () => map.invalidateSize());
+// Tap a legend's heading to fold it down to just the heading (remembered)
+document.getElementById('legends').addEventListener('click', e => {
+  const b = e.target.closest('b'), box = b?.parentElement; if (!box) return;
+  box.classList.toggle('shut');
+  try { localStorage.setItem('legshut-' + box.id, box.classList.contains('shut') ? '1' : ''); } catch(err){}
+});
+document.querySelectorAll('#legends > div').forEach(d => { try { if (localStorage.getItem('legshut-' + d.id) === '1') d.classList.add('shut'); } catch(e){} });
+// Hide / show the side panel; the map takes the space. Remembered on this device.
+(() => {
+  const app = document.querySelector('.app'), btn = document.getElementById('panebtn'), phone = matchMedia('(max-width:760px)');
+  const set = (c, save) => {
+    app.classList.toggle('collapsed', c);
+    btn.textContent = phone.matches ? (c ? 'Show panel' : 'Full-screen map') : (c ? '‹' : '›');
+    btn.title = btn.ariaLabel = c ? 'Show side panel' : 'Hide side panel';
+    if (save) try { localStorage.setItem('pane-collapsed', c ? '1' : ''); } catch(e){}
+    setTimeout(() => map.invalidateSize(), 60);
+  };
+  let c = false; try { c = localStorage.getItem('pane-collapsed') === '1'; } catch(e){}
+  set(c);
+  btn.addEventListener('click', () => set(!app.classList.contains('collapsed'), true));
+  phone.addEventListener('change', () => set(app.classList.contains('collapsed')));
+})();
 L.control.scale({imperial:true, metric:true, maxWidth:160}).addTo(map);
 
 // ---------- Base maps ----------
@@ -620,7 +657,7 @@ function applyTime(){
   }
   // Longer-range models only have 3-hourly steps after day 3: snap to 00/03/06… UTC
   const tq = model === CONFIG.windModels[0] ? t : snap3(t);
-  const lw = document.querySelector('#leg-wind b'); if (lw) lw.textContent = 'Wind · knots' + (hrs === 0 ? ' · now' : ' · ' + fmt(tq, {weekday:'short', hour:'numeric'}));
+  const lw = document.querySelector('#leg-wind b'); if (lw) lw.textContent = 'Wind kn' + (hrs === 0 ? ' · now' : ' · ' + fmt(tq, {weekday:'short', hour:'numeric'}));
   loadArrows(tq.toISOString().replace('.000',''), model);
   Object.values(wx).forEach(w => {
     let use = tq; const r = parseRange(w.time);
@@ -2018,7 +2055,8 @@ function togglePlay(){
   };
   wxPlay = setInterval(step, 1600); step();
 }
-let wkScrollToday = true;
+let wkScrollToday = true, wkNoVis = false;
+try { wkNoVis = localStorage.getItem('wk-novis') === '1'; } catch(e){}
 function setRange(n, back){
   if (wxPlay){ clearInterval(wxPlay); wxPlay = null; }
   wkRange = n; wkBack = back; wxSel = null; wxSelKey = null; setWxTime(null);
@@ -2051,13 +2089,16 @@ function drawWx(){
   const keepScroll = bar.scrollLeft;
   bar.innerHTML = `<div class="wxctl"><button type="button" class="play" aria-label="${wxPlay ? 'Pause' : 'Play'}" title="${wxPlay ? 'Pause' : 'Play through the forecast, 6 hours at a time'}">${wxPlay ? '❚❚' : '▶'}</button>` +
       `<select class="wkr" aria-label="How many days">${[7,14,30,90].map(n => `<option value="${n}"${n === wkRange ? ' selected' : ''}>${n} d</option>`).join('')}</select>` +
-      `<label class="wkb" title="Show the past days ending today (measured weather, wind and waves)"><input type="checkbox"${wkBack ? ' checked' : ''}> Lookback</label></div>` +
+      `<label class="wkb" title="Show the past days ending today (measured weather, wind and waves)"><input type="checkbox"${wkBack ? ' checked' : ''}> Lookback</label>` +
+      `<button type="button" class="visbtn" title="Show or hide the weather, wind, wave and tide pictures">${wkNoVis ? 'Graphs ▸' : 'Graphs ▾'}</button></div>` +
     (wkVisual('legend') ? `<div class="wxd wxlab">${wkVisual('legend')}<span class="dn-sp"></span></div>` : '') +
     keys.map((k, i) => { const nm = dlabel(k);
       return `<div class="wxd${k < todayKey ? ' pastd' : ''}">${wkVisual(k)}<button type="button" class="dn" data-i="${i}" aria-pressed="${k === selKey}" title="${esc2(nm)}">${esc2(nm)}</button>` +
       `<span class="seg4">${[0,1,2,3].map(b => `<button type="button" data-i="${i}" data-b="${b}" ${blockOK(k, b) ? '' : 'disabled'} aria-pressed="${!!(wxSel && wxSel.i === i && wxSel.b === b)}" aria-label="${esc2(nm)} ${BN[b]}" title="${esc2(nm)} ${BN[b]}: wind and waves"></button>`).join('')}</span></div>`; }).join('');
   bar.scrollLeft = keepScroll;
   if (wkScrollToday && wkKeys.length){ wkScrollToday = false; bar.scrollLeft = wkBack ? bar.scrollWidth : 0; }
+  bar.classList.toggle('novis', wkNoVis);
+  bar.querySelector('.visbtn').addEventListener('click', () => { wkNoVis = !wkNoVis; try { localStorage.setItem('wk-novis', wkNoVis ? '1' : ''); } catch(e){} drawWx(); });
   bar.querySelector('.play').addEventListener('click', togglePlay);
   bar.querySelector('.wkr').addEventListener('change', e => setRange(+e.target.value, wkBack));
   bar.querySelector('.wkb input').addEventListener('change', e => setRange(wkRange, e.target.checked));
