@@ -184,7 +184,11 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .wxdays .wxd:has(.wxvis){min-width:64px}
 .wxdays .wxvis{min-height:0;padding:0 1px;border:0;background:none;cursor:default;pointer-events:none}
 .wxdays .wxvis .mini{height:30px}
-.wxdays .wxd.wxlab{min-width:44px !important;position:sticky;left:0;background:var(--panel);z-index:1}
+.wxdays .wxctl{display:flex;flex-direction:column;gap:6px;align-items:stretch;justify-content:center;position:sticky;left:0;background:var(--panel);z-index:2;padding-right:4px}
+.wxdays .wxctl select{font:600 12px var(--sans);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:2px}
+.wxdays .wkb{font-size:10px;display:flex;align-items:center;gap:3px;color:var(--muted);white-space:nowrap;cursor:pointer}
+.wxdays .wxd.pastd .dn{opacity:.6}
+.wxdays .wxd.wxlab{min-width:44px !important;position:sticky;left:64px;background:var(--panel);z-index:1}
 .wxdays .wxlab .dn-sp{display:block;height:36px}
 .wxdays .wxlab .mini.lab span:first-child,.wxdays .wxlab .mini.lab span:last-child{font-size:7px}
 .wxdays .seg4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:0 2px 2px}
@@ -445,8 +449,10 @@ const CONFIG = {
 // Map area: Sand Heads (S) to Gambier Island (N), Baynes Sound (W) to Reed Point, Port Moody (E)
 const AREA = L.latLngBounds([[49.09, -124.90], [49.57, -122.84]]);
 const map = L.map('map', {zoomSnap:0.5, maxZoom:20, maxBounds:AREA.pad(0.08), maxBoundsViscosity:1.0});
-map.fitBounds(AREA);
 map.setMinZoom(map.getBoundsZoom(AREA.pad(0.08)));
+// Always open centred on the North Arm (Iona) jetty, wherever the phone is
+const HOME = [49.205, -123.245];
+map.setView(HOME, 11);
 window.addEventListener('load', () => map.invalidateSize());
 L.control.scale({imperial:true, metric:true, maxWidth:160}).addTo(map);
 
@@ -1186,6 +1192,8 @@ function navReset(){
   document.getElementById('nb-pos').textContent = 'No GPS fix';
 }
 navReset();
+let userPanAt = 0;
+map.on('dragstart', () => { userPanAt = Date.now(); });
 map.on('locationfound', e => {
   const now = Date.now();
   let sogKn = e.speed != null && !isNaN(e.speed) ? e.speed * 1.94384 : null;
@@ -1218,7 +1226,9 @@ map.on('locationfound', e => {
   document.getElementById('nb-pos').textContent = `${dm(e.latlng.lat,'N','S')}  ${dm(e.latlng.lng,'E','W')}  ±${Math.round(e.accuracy*3.281)} ft`;
 
   locbtn.textContent = 'Stop location';
-  if (firstFix){ map.setView(e.latlng, Math.max(map.getZoom(), 13)); firstFix = false; }
+  // Follow the boat only while it's moving (and not for 30 s after you drag the map yourself)
+  firstFix = false;
+  if (sogKn != null && sogKn > 1 && Date.now() - userPanAt > 30e3) map.panTo(e.latlng, {animate:true});
 });
 // Start live location as soon as the map opens
 setTimeout(() => { if (!watching) locbtn.click(); }, 300);
@@ -1746,12 +1756,17 @@ function labCellHTML(tides, mLo, mHi){
   return tides ? `<div class="cal-c cal-lab" aria-hidden="true"><span class="top"></span><span class="tide-grp"><span class="b4 lab"><span>Sky</span><span>Temp °C</span><span>Wind kn</span></span><span class="wv4 lab">Waves m</span><span class="mini lab"><span>${mHi.toFixed(1)}</span><span>Tide m</span><span>${mLo.toFixed(1)}</span></span><span class="tt">Hi/Lo</span><span class="tt">time · m</span></span></div>` : '<div class="cal-c cal-lab"></div>';
 }
 // Next 7 days in the side panel, with the same cells as the month calendar
-let wkToken = 0;
+let wkToken = 0, wkKeys = [];
+// Map day picker span: 7, 14, 30 or 90 days, forward from today or (lookback) ending today
+let wkRange = 7, wkBack = false;
+try { wkRange = +localStorage.getItem('wk-range') || 7; wkBack = localStorage.getItem('wk-back') === '1'; } catch(e){}
 async function renderWeek(){
   const grid = document.getElementById('wk-grid'); if (!grid) return;
   fillWxTowns();
   const tok = ++wkToken, now = Date.now(), keys = [];
-  for (let i = 0; i < 7; i++) keys.push(localKey(new Date(now + i*864e5)));
+  const start = wkBack ? now - (wkRange - 1)*864e5 : now;
+  for (let i = 0; i < wkRange; i++) keys.push(localKey(new Date(start + i*864e5)));
+  wkKeys = keys;
   const months = [...new Set(keys.map(k => k.slice(0, 7)))].map(s => s.split('-').map(Number));
   let tides = null;
   try {
@@ -1952,7 +1967,8 @@ const tempOf = (p, cls) => p?.temperatures?.temperature?.find(t => t.class?.en =
 const popOf = p => p?.abbreviatedForecast?.pop?.value?.en ?? p?.abbreviatedForecast?.pop?.en;
 // Day picker on the map: each day has four 6-hour blocks (00–06, 06–12, 12–18, 18–24) that move the
 // wind and wave layers to the middle of that block; ▶ plays through them. "Now" = no block chosen.
-let wxSel = null, wxPlay = null;
+let wxSel = null, wxPlay = null, wxSelKey = null;
+const LAST_FORECAST_MS = 15.5*864e5;   // the ensemble wind runs out at about day 16
 function wxDayKeys(dayNames){
   const keys = [], now = Date.now();
   let off = 0;
@@ -1965,23 +1981,30 @@ function wxDayKeys(dayNames){
   }
   return keys;
 }
+// Town forecast day name ("Thursday") for a date, if the 7-day town forecast covers it
+function dayWxName(key){
+  if (!wxData.length || !key) return null;
+  const names = wxData[0].days.map(x => x.day), ks = wxDayKeys(names), i = ks.indexOf(key);
+  return i >= 0 ? names[i] : null;
+}
+const blockOK = (k, b) => { const t0 = blockStart(k, b); return t0 + 6*3600e3 > Date.now() && t0 < Date.now() + LAST_FORECAST_MS; };
 function setWxTime(t){   // t = ms, or null for now
   const base = new Date(); base.setUTCMinutes(0,0,0);
   const hrs = t == null ? 0 : Math.round((t - base) / 3600e3);
-  if (hrs > +fhour.max) fhour.max = 168;
+  if (hrs > +fhour.max) fhour.max = Math.min(384, Math.max(168, Math.ceil(hrs / 24) * 24));
   fhour.step = 1;
   fhour.value = Math.max(0, Math.min(+fhour.max, hrs));
   applyTime();
 }
 function wxBlocks(){   // every selectable block, in order
-  const dayNames = wxData[0]?.days.map(x => x.day) || [], keys = wxDayKeys(dayNames), out = [];
-  keys.forEach((k, i) => { if (k) for (let b = 0; b < 4; b++) if (blockStart(k, b) + 6*3600e3 > Date.now()) out.push({i, b, k}); });
+  const out = [];
+  wkKeys.forEach((k, i) => { for (let b = 0; b < 4; b++) if (blockOK(k, b)) out.push({i, b, k}); });
   return out;
 }
 function selectBlock(i, b){
-  const dayNames = wxData[0].days.map(x => x.day), k = wxDayKeys(dayNames)[i];
-  wxDay = dayNames[i];
-  if (b == null || !k){ wxSel = null; setWxTime(null); }
+  const k = wkKeys[i]; wxSelKey = k;
+  const nm = dayWxName(k); if (nm) wxDay = nm;
+  if (b == null || !blockOK(k, b)){ wxSel = null; setWxTime(null); }
   else { wxSel = {i, b}; setWxTime(Math.max(Date.now(), blockStart(k, b) + 3*3600e3)); }
   drawWx();
 }
@@ -1994,6 +2017,13 @@ function togglePlay(){
     selectBlock(nx.i, nx.b);
   };
   wxPlay = setInterval(step, 1600); step();
+}
+let wkScrollToday = true;
+function setRange(n, back){
+  if (wxPlay){ clearInterval(wxPlay); wxPlay = null; }
+  wkRange = n; wkBack = back; wxSel = null; wxSelKey = null; setWxTime(null);
+  try { localStorage.setItem('wk-range', n); localStorage.setItem('wk-back', back ? '1' : ''); } catch(e){}
+  wkScrollToday = true; renderWeek();
 }
 map.on('layeradd layerremove', e => { if ([wxLayer, wx.wind?.layer, wx.wave?.layer, arrowLayer].includes(e.layer)) setTimeout(drawWx); });
 // The side panel's next-7-days cell for a day, minus the date and tide times, shown above that day's button
@@ -2012,15 +2042,29 @@ function drawWx(){
   if (bar.hidden) return;
   const dayNames = wxData[0].days.map(x => x.day);
   if (!dayNames.includes(wxDay)) wxDay = dayNames[0];
-  const keys = wxDayKeys(dayNames), nowMs = Date.now(), BN = ['00–06','06–12','12–18','18–24'];
-  bar.innerHTML = `<button type="button" class="play" aria-label="${wxPlay ? 'Pause' : 'Play'}" title="${wxPlay ? 'Pause' : 'Play through the week, 6 hours at a time'}">${wxPlay ? '❚❚' : '▶'}</button>` +
+  const todayKey = localKey(new Date()), BN = ['00–06','06–12','12–18','18–24'];
+  const keys = wkKeys.length ? wkKeys : wxDayKeys(dayNames).filter(Boolean);
+  const selKey = wxSelKey || todayKey;
+  const dlabel = k => { if (k === todayKey) return wxData[0].days[0].d ? 'Today' : 'Tonight';
+    const d = new Date(Date.UTC(+k.slice(0,4), +k.slice(5,7)-1, +k.slice(8), 20)), wd = d.toLocaleDateString('en-CA', {weekday:'short', timeZone:'UTC'});
+    return keys.length > 7 ? `${wd} ${+k.slice(8)}${+k.slice(8) === 1 ? ' ' + d.toLocaleDateString('en-CA', {month:'short', timeZone:'UTC'}) : ''}` : wd; };
+  const keepScroll = bar.scrollLeft;
+  bar.innerHTML = `<div class="wxctl"><button type="button" class="play" aria-label="${wxPlay ? 'Pause' : 'Play'}" title="${wxPlay ? 'Pause' : 'Play through the forecast, 6 hours at a time'}">${wxPlay ? '❚❚' : '▶'}</button>` +
+      `<select class="wkr" aria-label="How many days">${[7,14,30,90].map(n => `<option value="${n}"${n === wkRange ? ' selected' : ''}>${n} d</option>`).join('')}</select>` +
+      `<label class="wkb" title="Show the past days ending today (measured weather, wind and waves)"><input type="checkbox"${wkBack ? ' checked' : ''}> Lookback</label></div>` +
     (wkVisual('legend') ? `<div class="wxd wxlab">${wkVisual('legend')}<span class="dn-sp"></span></div>` : '') +
-    dayNames.map((d, i) => `<div class="wxd">${wkVisual(keys[i])}<button type="button" class="dn" data-i="${i}" aria-pressed="${d === wxDay}" title="${i === 0 ? 'Today: weather, and wind and waves now' : esc2(d) + ': weather, and wind and waves at midday'}">${i === 0 ? (wxData[0].days[0].d ? 'Today' : 'Tonight') : esc2(d.slice(0,3))}</button>` +
-      `<span class="seg4">${[0,1,2,3].map(b => { const gone = !keys[i] || blockStart(keys[i], b) + 6*3600e3 <= nowMs;
-        return `<button type="button" data-i="${i}" data-b="${b}" ${gone ? 'disabled' : ''} aria-pressed="${!!(wxSel && wxSel.i === i && wxSel.b === b)}" aria-label="${esc2(d)} ${BN[b]}" title="${esc2(d)} ${BN[b]}: wind and waves"></button>`; }).join('')}</span></div>`).join('');
+    keys.map((k, i) => { const nm = dlabel(k);
+      return `<div class="wxd${k < todayKey ? ' pastd' : ''}">${wkVisual(k)}<button type="button" class="dn" data-i="${i}" aria-pressed="${k === selKey}" title="${esc2(nm)}">${esc2(nm)}</button>` +
+      `<span class="seg4">${[0,1,2,3].map(b => `<button type="button" data-i="${i}" data-b="${b}" ${blockOK(k, b) ? '' : 'disabled'} aria-pressed="${!!(wxSel && wxSel.i === i && wxSel.b === b)}" aria-label="${esc2(nm)} ${BN[b]}" title="${esc2(nm)} ${BN[b]}: wind and waves"></button>`).join('')}</span></div>`; }).join('');
+  bar.scrollLeft = keepScroll;
+  if (wkScrollToday && wkKeys.length){ wkScrollToday = false; bar.scrollLeft = wkBack ? bar.scrollWidth : 0; }
   bar.querySelector('.play').addEventListener('click', togglePlay);
-  bar.querySelectorAll('.dn').forEach(b => b.addEventListener('click', () => { if (wxPlay){ clearInterval(wxPlay); wxPlay = null; } const i = +b.dataset.i; selectBlock(i, i === 0 ? null : 2); }));
+  bar.querySelector('.wkr').addEventListener('change', e => setRange(+e.target.value, wkBack));
+  bar.querySelector('.wkb input').addEventListener('change', e => setRange(wkRange, e.target.checked));
+  bar.querySelectorAll('.dn').forEach(b => b.addEventListener('click', () => { if (wxPlay){ clearInterval(wxPlay); wxPlay = null; } const i = +b.dataset.i, k = wkKeys[i]; selectBlock(i, k === todayKey ? null : blockOK(k, 2) ? 2 : null); }));
   bar.querySelectorAll('.seg4 button').forEach(b => b.addEventListener('click', () => { if (wxPlay){ clearInterval(wxPlay); wxPlay = null; } selectBlock(+b.dataset.i, +b.dataset.b); }));
+  // Town labels only for days the town forecast covers
+  if (!dayWxName(selKey) && selKey !== todayKey) return;
   for (const t of wxData){
     const e = t.days.find(x => x.day === wxDay); if (!e) continue;
     const main = e.d || e.n, hi = tempOf(e.d, 'high'), lo = tempOf(e.n, 'low'), pop = popOf(e.d) ?? popOf(e.n);
