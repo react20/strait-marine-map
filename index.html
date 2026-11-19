@@ -1666,7 +1666,7 @@ function paintWind(root, key, b, w, loc, src){
   if (w.dir == null) return;
   const hs = waveHeight(w.kn, fetchMetres(loc.lat, loc.lon, w.dir));
   const wv = root.querySelector(`.wv[data-key="${key}"][data-b="${b}"]`);
-  if (wv){ wv.textContent = hs < 0.05 ? '0' : hs.toFixed(1); wv.className = 'wv ' + (hs < 0.5 ? 'c' : hs < 1 ? 'w' : 'x') + (wv.classList.contains('past') ? ' past' : '');
+  if (wv){ wv.textContent = hs < 0.05 ? '0' : hs.toFixed(1).replace(/^0\./, '.'); wv.className = 'wv ' + (hs < 0.5 ? 'c' : hs < 1 ? 'w' : 'x') + (wv.classList.contains('past') ? ' past' : '');
     wv.title = `${BLOCK_NAMES[b]}: waves about ${hs.toFixed(1)} m (${(hs*3.281).toFixed(0)} ft), estimated from ${src && src.startsWith('measured') ? 'the measured' : 'the forecast'} wind. No ocean swell reaches the inner Strait.`; }
 }
 async function loadBlockWinds(root, keys, st, isStale){
