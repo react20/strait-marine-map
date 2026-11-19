@@ -184,6 +184,9 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .wxdays .wxd:has(.wxvis){min-width:64px}
 .wxdays .wxvis{min-height:0;padding:0 1px;border:0;background:none;cursor:default;pointer-events:none}
 .wxdays .wxvis .mini{height:30px}
+.wxdays .wxd.wxlab{min-width:44px !important;position:sticky;left:0;background:var(--panel);z-index:1}
+.wxdays .wxlab .dn-sp{display:block;height:36px}
+.wxdays .wxlab .mini.lab span:first-child,.wxdays .wxlab .mini.lab span:last-child{font-size:7px}
 .wxdays .seg4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:0 2px 2px}
 .wxdays .seg4 button{padding:0;height:10px;min-width:0;border-radius:2px;background:var(--line);border:0}
 .wxdays .seg4 button[aria-pressed="true"]{background:var(--pin)}
@@ -1989,11 +1992,11 @@ function togglePlay(){
 map.on('layeradd layerremove', e => { if ([wxLayer, wx.wind?.layer, wx.wave?.layer, arrowLayer].includes(e.layer)) setTimeout(drawWx); });
 // The side panel's next-7-days cell for a day, minus the date and tide times, shown above that day's button
 function wkVisual(key){
-  const src = key && document.querySelector(`#wk-grid .cal-c[data-key="${key}"] .tide-grp`);
+  const src = key === 'legend' ? document.querySelector('#wk-grid .cal-lab .tide-grp') : key && document.querySelector(`#wk-grid .cal-c[data-key="${key}"] .tide-grp`);
   if (!src) return '';
   const c = src.cloneNode(true);
   c.querySelectorAll('.tt').forEach(n => n.remove());
-  return `<div class="cal-c wxvis" aria-hidden="true">${c.outerHTML}</div>`;
+  return `<div class="cal-c wxvis${key === 'legend' ? ' cal-lab' : ''}" aria-hidden="true">${c.outerHTML}</div>`;
 }
 function drawWx(){
   wxLayer.clearLayers();
@@ -2005,6 +2008,7 @@ function drawWx(){
   if (!dayNames.includes(wxDay)) wxDay = dayNames[0];
   const keys = wxDayKeys(dayNames), nowMs = Date.now(), BN = ['00–06','06–12','12–18','18–24'];
   bar.innerHTML = `<button type="button" class="play" aria-label="${wxPlay ? 'Pause' : 'Play'}" title="${wxPlay ? 'Pause' : 'Play through the week, 6 hours at a time'}">${wxPlay ? '❚❚' : '▶'}</button>` +
+    (wkVisual('legend') ? `<div class="wxd wxlab">${wkVisual('legend')}<span class="dn-sp"></span></div>` : '') +
     dayNames.map((d, i) => `<div class="wxd">${wkVisual(keys[i])}<button type="button" class="dn" data-i="${i}" aria-pressed="${d === wxDay}" title="${i === 0 ? 'Today: weather, and wind and waves now' : esc2(d) + ': weather, and wind and waves at midday'}">${i === 0 ? (wxData[0].days[0].d ? 'Today' : 'Tonight') : esc2(d.slice(0,3))}</button>` +
       `<span class="seg4">${[0,1,2,3].map(b => { const gone = !keys[i] || blockStart(keys[i], b) + 6*3600e3 <= nowMs;
         return `<button type="button" data-i="${i}" data-b="${b}" ${gone ? 'disabled' : ''} aria-pressed="${!!(wxSel && wxSel.i === i && wxSel.b === b)}" aria-label="${esc2(d)} ${BN[b]}" title="${esc2(d)} ${BN[b]}: wind and waves"></button>`; }).join('')}</span></div>`).join('');
