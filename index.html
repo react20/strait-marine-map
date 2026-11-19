@@ -256,6 +256,7 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .cal-grid.hidepast .cal-c.pastweek.cal-lab{min-height:0;padding:0}.cal-grid.hidepast .cal-c.pastweek.cal-lab > *{display:none}
 .cal-grid.hidepast .cal-c.pastweek.empty{min-height:0;padding:0}
 .cal-pasttog{font-size:12px;white-space:nowrap}
+.lyr:has(input:not(:checked)) .st{visibility:hidden}
 .cal-tide{font-size:13px;color:var(--muted);padding:6px 4px;white-space:nowrap}
 .cal-bar #cal-wx{margin-left:auto}
 .sos-card.pan{border-top-color:#e8890c}
@@ -471,7 +472,10 @@ Object.keys(bases).forEach((k,i) => {
 
 // ---------- Overlay registry with status ----------
 const ovl = document.getElementById('overlays');
+// Only wind speed and wind arrows start switched on; everything else is one tick away
+const DEFAULT_ON = new Set(['wind', 'arrow']);
 function addOverlay(id, title, sub, layer, on=true){
+  on = DEFAULT_ON.has(id);
   const row = document.createElement('label'); row.className='lyr';
   row.title = sub;
   row.innerHTML = `<input type="checkbox" id="o-${id}" ${on?'checked':''}><span>${title}<small>${sub}</small></span><span class="st wait" id="s-${id}">loading</span>`;
@@ -1910,10 +1914,12 @@ function togglePlay(){
   };
   wxPlay = setInterval(step, 1600); step();
 }
+map.on('layeradd layerremove', e => { if ([wxLayer, wx.wind?.layer, wx.wave?.layer, arrowLayer].includes(e.layer)) setTimeout(drawWx); });
 function drawWx(){
   wxLayer.clearLayers();
   const bar = document.getElementById('wxdays');
-  bar.hidden = !map.hasLayer(wxLayer) || !wxData.length;
+  // The day / 6-hour picker drives weather, wind and waves, so show it when any of them is on
+  bar.hidden = !wxData.length || ![wxLayer, wx.wind?.layer, wx.wave?.layer, arrowLayer].some(l => l && map.hasLayer(l));
   if (bar.hidden) return;
   const dayNames = wxData[0].days.map(x => x.day);
   if (!dayNames.includes(wxDay)) wxDay = dayNames[0];
