@@ -524,6 +524,9 @@ function cutLand(g, coords, size, mapRef){
     }
   }
   if (any) g.fill('evenodd');
+  // and nothing outside the charter area
+  const a0 = mapRef.project(AREA.getNorthWest(), coords.z).subtract(origin), a1 = mapRef.project(AREA.getSouthEast(), coords.z).subtract(origin);
+  g.beginPath(); g.rect(0, 0, g.canvas.width, g.canvas.height); g.rect(a0.x*sx, a0.y*sy, (a1.x-a0.x)*sx, (a1.y-a0.y)*sy); g.fill('evenodd');
   g.restore();
 }
 const SeaOnlyWMS = L.TileLayer.WMS.extend({
