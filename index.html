@@ -131,6 +131,10 @@ section{display:flex;flex-direction:column}
 .acct{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:12px}
 .gbtn{font:600 13px var(--sans);padding:6px 12px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--fg);cursor:pointer}
 .acct-who{color:var(--muted)}
+.live-row{flex-basis:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.live-tog{display:flex;align-items:center;gap:5px;font-weight:600;cursor:pointer}
+#live-boat{font:12px var(--sans);padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--fg);width:150px}
+.livelbl{background:#0a7d6e;color:#fff;border-radius:3px;padding:1px 5px;font:600 11px var(--sans);white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.3)}
 .linkbtn{font:inherit;font-size:12px;background:none;border:0;color:var(--pin);cursor:pointer;padding:0;text-decoration:underline}
 .calbtn{margin-bottom:8px;font:600 13px var(--sans);padding:7px 10px;border:1px solid var(--pin);border-radius:4px;background:var(--panel);color:var(--pin);cursor:pointer;align-self:flex-start}
 .cal{position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(12px,env(safe-area-inset-top,0px)) 10px 24px}
@@ -350,7 +354,7 @@ a{color:var(--pin)}
       <p class="note" style="margin-top:6px">Check the Coast Guard's Radio Aids to Marine Navigation before relying on these.</p></div><div class="wxdays" id="wxdays" hidden></div><button type="button" class="locbtn" id="locbtn" aria-pressed="false">My location</button><div class="readout" id="readout">Tap the water for wind and waves at that spot</div></div>
   <aside>
     <div>
-      <div class="acct" id="acct" hidden><button type="button" class="gbtn" id="gsign">Sign in with Google</button><span class="acct-who" id="acct-who"></span><button type="button" class="linkbtn" id="gout" hidden>Sign out</button></div>
+      <div class="acct" id="acct" hidden><button type="button" class="gbtn" id="gsign">Sign in with Google</button><span class="acct-who" id="acct-who"></span><button type="button" class="linkbtn" id="gout" hidden>Sign out</button><div class="live-row" id="live-row" hidden><label class="live-tog"><input type="checkbox" id="live-on"> Share my live location</label><input type="text" id="live-boat" maxlength="40" placeholder="Boat name (optional)"><span class="acct-who" id="live-st">Off · other signed-in users can't see you</span></div></div>
       <h1>Strait of Georgia Marine Map</h1>
       <p class="sub">Sand Heads to Gambier Island · Baynes Sound to Reed Point</p>
     </div>
@@ -2128,8 +2132,101 @@ async function loadWx(){
 wxLayer.on('add remove', () => setTimeout(drawWx));
 loadWx(); setInterval(loadWx, 30*60e3);
 
+
+// ---------- Live location sharing (opt-in, signed-in users only) ----------
+// Your position goes to Firestore live/{your uid}; everyone signed in sees the others on the map.
+// Sharing is off every time the page opens, and turning it off (or signing out) deletes your position.
+function setupLive(db){
+  const STALE_MIN = 10;                       // hide boats not heard from in 10 minutes
+  const row = document.getElementById('live-row'), tog = document.getElementById('live-on');
+  const boat = document.getElementById('live-boat'), st = document.getElementById('live-st');
+  try { boat.value = localStorage.getItem('live-boat') || ''; } catch(e){}
+  boat.addEventListener('input', () => { try { localStorage.setItem('live-boat', boat.value); } catch(e){} lastSent = null; });
+  const layer = L.layerGroup();
+  const setStatus = addOverlay('live', 'Boats sharing live', 'Signed-in users who turned on "Share my live location"', layer);
+  setStatus('wait', 'sign in');
+  let user = null, unsub = null, watchId = null, lastSent = null, prev = null, others = new Map(), sendTimer = null;
+  const ago = ms => { const m = Math.round(ms / 60000); return m < 1 ? 'just now' : m + ' min ago'; };
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const myName = () => (boat.value.trim() || (user && (user.displayName || '').split(' ')[0]) || 'Boat').slice(0, 40);
+
+  function draw(){
+    layer.clearLayers();
+    const now = Date.now(); let n = 0;
+    for (const [uid, d] of others){
+      const t = d.t && d.t.toMillis ? d.t.toMillis() : 0;
+      if (!t || now - t > STALE_MIN * 60e3 || (user && uid === user.uid)) continue;
+      n++;
+      const rot = d.cog != null && (d.sog ?? 0) > 0.5 ? d.cog : null;
+      const svg = rot != null
+        ? `<svg viewBox="0 0 26 26" width="26" height="26" style="transform:rotate(${rot}deg)"><path d="M13 2 L21 23 L13 18 L5 23 Z" fill="#0a7d6e" stroke="#fff" stroke-width="2"/></svg>`
+        : `<svg viewBox="0 0 26 26" width="26" height="26"><circle cx="13" cy="13" r="7" fill="#0a7d6e" stroke="#fff" stroke-width="2.5"/></svg>`;
+      const icon = L.divIcon({className:'', iconSize:[26,26], iconAnchor:[13,13], html: svg + `<span class="livelbl" style="position:absolute;left:24px;top:4px">${esc(d.name || 'Boat')}</span>`});
+      L.marker([d.lat, d.lng], {icon, keyboard:false})
+        .bindPopup(`<b>${esc(d.name || 'Boat')}</b><br>${d.sog != null ? d.sog.toFixed(1) + ' kn' : 'speed —'}${rot != null ? ' · ' + Math.round(rot) + '°' : ''}<br><small>Updated ${ago(now - t)} · ±${Math.round(d.acc || 0)} m</small>`)
+        .addTo(layer);
+    }
+    if (user) setStatus(n ? 'ok' : 'wait', n ? n + ' live' : 'none now');
+  }
+  setInterval(draw, 30e3);   // age out boats that stopped sharing without signing off
+
+  function listen(){
+    if (unsub) unsub();
+    const since = firebase.firestore.Timestamp.fromMillis(Date.now() - 6 * 3600e3);
+    unsub = db.collection('live').where('t', '>', since).onSnapshot(snap => {
+      snap.docChanges().forEach(c => c.type === 'removed' ? others.delete(c.doc.id) : others.set(c.doc.id, c.doc.data()));
+      draw();
+    }, () => setStatus('bad', 'failed'));
+  }
+
+  function send(p){
+    if (!user || !tog.checked) return;
+    const ll = L.latLng(p.coords.latitude, p.coords.longitude), now = Date.now();
+    if (!AREA.pad(0.5).contains(ll)){ st.textContent = 'On · you\'re outside the map area, so nothing is shared'; return; }
+    let sog = p.coords.speed != null && !isNaN(p.coords.speed) ? p.coords.speed * 1.94384 : null;
+    let cog = p.coords.heading != null && !isNaN(p.coords.heading) ? p.coords.heading : null;
+    if (prev){ const dist = map.distance(prev.ll, ll), dt = (now - prev.t) / 1000;
+      if (sog == null && dt > 0) sog = dist / dt * 1.94384;
+      if (cog == null && dist > 10) cog = bearing(prev.ll, ll); }
+    prev = {ll, t: now};
+    // Send at most every 15 s, and only after moving 20 m — or every 2 min as a heartbeat
+    if (lastSent && ((now - lastSent.t < 15e3) || (map.distance(lastSent.ll, ll) < 20 && now - lastSent.t < 120e3))) return;
+    lastSent = {ll, t: now};
+    db.collection('live').doc(user.uid).set({name: myName(), lat: +ll.lat.toFixed(5), lng: +ll.lng.toFixed(5),
+        acc: Math.round(p.coords.accuracy || 0), sog: sog != null ? +sog.toFixed(1) : null, cog: cog != null ? Math.round(cog) : null,
+        t: firebase.firestore.FieldValue.serverTimestamp()})
+      .then(() => { st.textContent = 'On · sharing as "' + myName() + '" · sent ' + fmt(new Date(), {hour:'numeric', minute:'2-digit'}); })
+      .catch(e => { st.textContent = 'On · could not send (' + (e.code || 'offline') + ')'; });
+  }
+
+  function start(){
+    if (!navigator.geolocation){ tog.checked = false; st.textContent = 'This browser has no GPS access'; return; }
+    st.textContent = 'On · finding your position…'; lastSent = null; prev = null;
+    watchId = navigator.geolocation.watchPosition(send, e => {
+      st.textContent = e.code === 1 ? 'Location permission was denied' : 'Waiting for GPS…';
+      if (e.code === 1){ tog.checked = false; stop(); }
+    }, {enableHighAccuracy:true, maximumAge:5000, timeout:60000});
+    // Heartbeat: re-send the last fix every 2 min even when sitting still
+    clearInterval(sendTimer);
+    sendTimer = setInterval(() => navigator.geolocation.getCurrentPosition(send, () => {}, {maximumAge:60000, timeout:20000}), 120e3);
+  }
+  function stop(){
+    if (watchId != null) navigator.geolocation.clearWatch(watchId);
+    watchId = null; clearInterval(sendTimer); lastSent = null;
+    st.textContent = 'Off · other signed-in users can\'t see you';
+    return user ? db.collection('live').doc(user.uid).delete().catch(() => {}) : Promise.resolve();
+  }
+  tog.addEventListener('change', () => tog.checked ? start() : stop());
+
+  return { onUser(u){
+    if (!u && user){ if (tog.checked){ tog.checked = false; stop(); } }   // delete before auth goes away is best-effort
+    user = u; row.hidden = !u;
+    if (u) listen(); else { if (unsub) unsub(); unsub = null; others.clear(); draw(); setStatus('wait', 'sign in'); }
+  }, beforeSignOut(){ if (tog.checked){ tog.checked = false; return stop(); } return Promise.resolve(); } };
+}
+
 // ---------- Google sign-in: save settings to your account ----------
-const SYNC_KEYS = ['ais-cloud','cal-station','cal-wx','sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta','sos-what-MAYDAY','sos-what-PAN','dlspot'];
+const SYNC_KEYS = ['ais-cloud','cal-station','cal-wx','sos-name','sos-call','sos-pob','sos-desc','sos-other','sos-cname','sos-cphone','sos-dest','sos-eta','sos-what-MAYDAY','sos-what-PAN','dlspot','live-boat'];
 (function setupAccount(){
   const box = document.getElementById('acct');
   if (!CONFIG.firebase || typeof firebase === 'undefined' || location.protocol === 'file:') return;   // only on the hosted site
@@ -2138,6 +2235,7 @@ const SYNC_KEYS = ['ais-cloud','cal-station','cal-wx','sos-name','sos-call','sos
   const auth = firebase.auth(), db = firebase.firestore();
   const who = document.getElementById('acct-who'), sbtn = document.getElementById('gsign'), obtn = document.getElementById('gout');
   let docRef = null, saveTimer = null, applying = false;
+  const live = setupLive(db);
   const readLocal = () => Object.fromEntries(SYNC_KEYS.map(k => { try { return [k, localStorage.getItem(k) ?? '']; } catch(e){ return [k, '']; } }));
   function applyRemote(data){
     applying = true;
@@ -2170,8 +2268,9 @@ const SYNC_KEYS = ['ais-cloud','cal-station','cal-wx','sos-name','sos-call','sos
     try { if (/Android|iPhone|iPad/.test(navigator.userAgent)) await auth.signInWithRedirect(provider); else await auth.signInWithPopup(provider); }
     catch(e){ who.textContent = 'Sign-in failed: ' + (e.message || e.code); }
   });
-  obtn.addEventListener('click', () => auth.signOut());
+  obtn.addEventListener('click', async () => { try { await live.beforeSignOut(); } catch(e){} auth.signOut(); });   // remove your live position while still signed in
   auth.onAuthStateChanged(async user => {
+    live.onUser(user);
     if (!user){ docRef = null; sbtn.hidden = false; obtn.hidden = true; who.textContent = 'Settings are saved on this device only'; return; }
     sbtn.hidden = true; obtn.hidden = false;
     who.dataset.name = user.displayName || user.email;
