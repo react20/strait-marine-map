@@ -257,6 +257,16 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 .cal-grid.hidepast .cal-c.pastweek.empty{min-height:0;padding:0}
 .cal-pasttog{font-size:12px;white-space:nowrap}
 .lyr:has(input:not(:checked)) .st{visibility:hidden}
+.wk{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+.wk-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.wk-grid{grid-template-columns:40px repeat(7,minmax(0,1fr)) !important}
+.wk-grid .cal-h{position:static;margin-top:0;padding:2px 0;box-shadow:none}
+.wk-grid .cal-c,#calhost .cal-c{min-height:0}
+#calhost .cal-card{width:auto;box-shadow:none;border-top:0;padding:6px 0 0;border-radius:0}
+#calhost .cal-grid{grid-template-columns:40px repeat(7,minmax(0,1fr))}
+#calhost .cal-h{top:-16px}
+.calx > summary{cursor:pointer;font-weight:600;padding:6px 0;color:var(--pin)}
+aside .cal-lab .lab,aside .cal-lab .tt{font-size:7.5px}
 .cal-tide{font-size:13px;color:var(--muted);padding:6px 4px;white-space:nowrap}
 .cal-bar #cal-wx{margin-left:auto}
 .sos-card.pan{border-top-color:#e8890c}
@@ -339,6 +349,8 @@ a{color:var(--pin)}
 
     <details class="pane" data-pane="tides2">
       <summary><h2>Forecasts</h2><button type="button" class="calbtn" id="calbtn">Calendar</button></summary>
+      <div class="wk"><div class="wk-head"><b>Next 7 days</b><span class="note" id="wk-tide"></span></div><div class="cal-grid wk-grid" id="wk-grid"><p class="note">Loading…</p></div></div>
+      <details class="calx" id="calx"><summary>Month calendar</summary><div id="calhost"></div></details>
       <div id="tides"><p class="note">Loading tide predictions…</p></div>
       <p class="note">Today 00:00–23:59 · heights in metres · shaded = night · orange = sunrise and sunset · red = now</p>
     </details>
@@ -1630,8 +1642,8 @@ function obsBlock(obs, t0){
   }
   return {temp: T.length ? Math.round(T.reduce((s, h) => s + h.temp, 0) / T.length) : null, rain, wind};
 }
-function paintWind(key, b, w, loc, src){
-  const el = document.querySelector(`.bk[data-key="${key}"][data-b="${b}"] .wd`);
+function paintWind(root, key, b, w, loc, src){
+  const el = root.querySelector(`.bk[data-key="${key}"][data-b="${b}"] .wd`);
   if (!el || !w) return;
   const cls = w.kn < 10 ? 'c' : w.kn < 20 ? 'w' : 'x';
   el.className = 'wd ' + cls + (w.dir == null ? ' so' : '');
@@ -1639,14 +1651,13 @@ function paintWind(key, b, w, loc, src){
   el.parentElement.title += ` · wind ${w.dir != null ? compass(w.dir) + ' ' : ''}${w.kn.toFixed(0)} kn${w.max ? ' (strongest hour ' + w.max.toFixed(0) + ' kn)' : ''}${src && !el.parentElement.title.includes(src) ? ' · ' + src : ''}`;
   if (w.dir == null) return;
   const hs = waveHeight(w.kn, fetchMetres(loc.lat, loc.lon, w.dir));
-  const wv = document.querySelector(`.wv[data-key="${key}"][data-b="${b}"]`);
+  const wv = root.querySelector(`.wv[data-key="${key}"][data-b="${b}"]`);
   if (wv){ wv.textContent = hs < 0.05 ? '0' : hs.toFixed(1); wv.className = 'wv ' + (hs < 0.5 ? 'c' : hs < 1 ? 'w' : 'x') + (wv.classList.contains('past') ? ' past' : '');
     wv.title = `${BLOCK_NAMES[b]}: waves about ${hs.toFixed(1)} m (${(hs*3.281).toFixed(0)} ft), estimated from ${src && src.startsWith('measured') ? 'the measured' : 'the forecast'} wind. No ocean swell reaches the inner Strait.`; }
 }
-async function loadBlockWinds(y, m, days, st){
+async function loadBlockWinds(root, keys, st, isStale){
   const now = Date.now(), jobs = [], pastJobs = [];
-  for (let d = 1; d <= days; d++){
-    const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  for (const key of keys){
     for (let b = 0; b < 4; b++){
       const t0 = blockStart(key, b), t = t0 + 3*3600e3;
       if (t0 + 6*3600e3 <= now) pastJobs.push({key, b, t0});
@@ -1654,20 +1665,21 @@ async function loadBlockWinds(y, m, days, st){
     }
   }
   const code = calStation.value, loc = CAL_POINTS[code] || {lat: st.lat, lon: st.lon};
-  const stale = () => !document.getElementById('cal') || document.getElementById('cal').hidden || calState.y !== y || calState.m !== m || calStation.value !== code;
+  const stale = () => !root.isConnected || isStale();
   // Past: measured values, greyed out
   if (pastJobs.length){
-    monthObs(code, y, m).then(obs => {
+    const months = [...new Set(pastJobs.map(j => j.key.slice(0, 7)))].map(s => s.split('-').map(Number));
+    Promise.all(months.map(([y, m]) => monthObs(code, y, m - 1))).then(parts => parts.flat()).then(obs => {
       if (stale()) return;
       const sname = OBS_STATIONS[code]?.name || 'station';
       for (const j of pastJobs){
-        const o = obsBlock(obs, j.t0), bk = document.querySelector(`.bk[data-key="${j.key}"][data-b="${j.b}"]`); if (!bk) continue;
+        const o = obsBlock(obs, j.t0), bk = root.querySelector(`.bk[data-key="${j.key}"][data-b="${j.b}"]`); if (!bk) continue;
         if (!o){ if (j.t0 > Date.now() - 2*864e5) bk.title = `${BLOCK_NAMES[j.b]}: no measurements from ${sname} yet`; continue; }
         const ic = o.rain >= 1 ? '12' : o.rain >= 0.2 ? (j.b === 1 || j.b === 2 ? '06' : '36') : null;
         if (ic) bk.querySelector('i.noic')?.replaceWith(Object.assign(document.createElement('img'), {src: ECI(ic), alt: ''}));
         if (o.temp != null) bk.querySelector('.wi').innerHTML = `<b>${o.temp}°</b>`;
         bk.title = `${BLOCK_NAMES[j.b]}: measured at ${sname}${o.temp != null ? ', ' + o.temp + '°' : ''}${o.rain != null ? ', ' + (o.rain > 0 ? o.rain.toFixed(1) + ' mm rain' : 'dry') : ''}`;
-        paintWind(j.key, j.b, o.wind, loc, `measured at ${sname}`);
+        paintWind(root, j.key, j.b, o.wind, loc, `measured at ${sname}`);
       }
     });
   }
@@ -1676,7 +1688,7 @@ async function loadBlockWinds(y, m, days, st){
     const part = jobs.slice(i, i + 8);
     await Promise.all(part.map(async j => {
       const tt = new Date(Math.round(j.t / 3600e3) * 3600e3), ck = `${loc.lat},${loc.lon},${tt.getTime() / 3600e3}`;
-      const bk = document.querySelector(`.bk[data-key="${j.key}"][data-b="${j.b}"]`);
+      const bk = root.querySelector(`.bk[data-key="${j.key}"][data-b="${j.b}"]`);
       if (bk?.dataset.nowx){
         const w = await modelWeather(loc, tt.getTime(), j.b);
         if (w && bk.isConnected){
@@ -1691,10 +1703,54 @@ async function loadBlockWinds(y, m, days, st){
         const ms = await pointValue(CONFIG.windModels[2].speed, snap3(tt).getTime(), loc);
         if (ms != null){ w = {kn: ms * 1.94384, dir: null}; src = 'ensemble average, speed only'; }
       }
-      paintWind(j.key, j.b, w, loc, src);
+      paintWind(root, j.key, j.b, w, loc, src);
     }));
     if (stale()) return;
   }
+}
+// One calendar day: date + moon, four weather blocks, waves, tide curve, tide times
+function dayCellHTML(key, tides, mLo, mHi, wxd, phases, todayKey){
+  const [y, m1, d] = key.split('-').map(Number), m = m1 - 1;
+  const ev = tides?.byDay[key] || [];
+  const hi = ev.filter(e => e.high).map(e => e.v), lo = ev.filter(e => !e.high).map(e => e.v);
+  const range = hi.length && lo.length ? Math.max(...hi) - Math.min(...lo) : null;
+  const p = moonPhase(Date.UTC(y, m, d, 20));
+  const html = `<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key < todayKey ? ' pastday' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
+      `<span class="top" title="${phases[key] || moonName(p)}">${d}${moonSVG(p, 16)}</span>` +
+      (tides ? `<span class="tide-grp">${blocksHTML(key, wxd)}<span class="wv4">${[0,1,2,3].map(b => `<span class="wv${blockStart(key, b) + 6*3600e3 <= Date.now() ? ' past' : ''}" data-key="${key}" data-b="${b}"></span>`).join('')}</span><span class="mini">${miniTide(localMidnight(new Date(Date.UTC(y, m, d, 20))), tides.ev, mLo, mHi)}</span>` : '') +
+      (ev.length ? ev.map(e => `<span class="tt ${e.high ? 'hi' : 'lo'}${e.t < Date.now() ? ' gone' : ''}" title="${e.high ? 'High' : 'Low'} ${fmt(e.t,{hour:'numeric',minute:'2-digit'})}, ${e.v.toFixed(1)} m"><i>${e.high ? '▲' : '▼'}</i>${shortTime(e.t)} <em>${e.v.toFixed(1)}</em></span>`).join('') : (tides ? '<span class="tt">–</span>' : '')) + (tides ? '</span>' : '') +
+      `</button>`;
+  return {html, range};
+}
+function labCellHTML(tides, mLo, mHi){
+  return tides ? `<div class="cal-c cal-lab" aria-hidden="true"><span class="top"></span><span class="tide-grp"><span class="b4 lab"><span>Sky</span><span>Temp °C</span><span>Wind kn</span></span><span class="wv4 lab">Waves m</span><span class="mini lab"><span>${mHi.toFixed(1)}</span><span>Tide m</span><span>${mLo.toFixed(1)}</span></span><span class="tt">Hi/Lo</span><span class="tt">time · m</span></span></div>` : '<div class="cal-c cal-lab"></div>';
+}
+// Next 7 days in the side panel, with the same cells as the month calendar
+let wkToken = 0;
+async function renderWeek(){
+  const grid = document.getElementById('wk-grid'); if (!grid) return;
+  fillWxTowns();
+  const tok = ++wkToken, now = Date.now(), keys = [];
+  for (let i = 0; i < 7; i++) keys.push(localKey(new Date(now + i*864e5)));
+  const months = [...new Set(keys.map(k => k.slice(0, 7)))].map(s => s.split('-').map(Number));
+  let tides = null;
+  try {
+    const parts = await Promise.all(months.map(([y, m]) => monthTides(calStation.value, y, m - 1)));
+    const ev = [...new Map(parts.flatMap(p => p.ev).map(e => [e.t.getTime(), e])).values()].sort((a, b) => a.t - b.t);
+    tides = {st: parts[0].st, ev, byDay: Object.assign({}, ...parts.map(p => p.byDay))};
+  } catch(e){}
+  if (tok !== wkToken) return;
+  const vs = keys.flatMap(k => (tides?.byDay[k] || []).map(e => e.v)), lo = vs.length ? Math.min(...vs) : 0, hi = vs.length ? Math.max(...vs) : 1;
+  const phases = Object.assign({}, ...months.map(([y, m]) => keyPhaseDays(y, m - 1)));
+  const wxd = wxByDate(), todayKey = localKey(new Date());
+  grid.innerHTML = '<div class="cal-h"></div>' + keys.map((k, i) => `<div class="cal-h">${i ? new Date(Date.UTC(+k.slice(0,4), +k.slice(5,7)-1, +k.slice(8), 20)).toLocaleDateString('en-CA', {weekday:'short', timeZone:'UTC'}) : 'Today'}</div>`).join('') +
+    labCellHTML(tides, lo, hi) + keys.map(k => dayCellHTML(k, tides, lo, hi, wxd, phases, todayKey).html).join('');
+  document.getElementById('wk-tide').textContent = tides ? 'Tides: ' + (tides.st.name || '') : '';
+  grid.querySelectorAll('.cal-c[data-key]').forEach(c => c.addEventListener('click', () => {
+    const [y, m] = c.dataset.key.split('-').map(Number);
+    calState.y = y; calState.m = m - 1; calState.sel = c.dataset.key; openCal();
+  }));
+  if (tides) loadBlockWinds(grid, keys, tides.st, () => tok !== wkToken);
 }
 async function renderCal(){
   fillWxTowns();   // also picks the matching tide station
@@ -1712,23 +1768,17 @@ async function renderCal(){
   // range per day, to flag the biggest tides of the month
   const ranges = [];
   // Row labels with units, at the far left of each week
-  const labCell = () => tides ? `<div class="cal-c cal-lab" aria-hidden="true"><span class="top"></span><span class="tide-grp"><span class="b4 lab"><span>Sky</span><span>Temp °C</span><span>Wind kn</span></span><span class="wv4 lab">Waves m</span><span class="mini lab"><span>${mHi.toFixed(1)}</span><span>Tide m</span><span>${mLo.toFixed(1)}</span></span><span class="tt">Hi/Lo</span><span class="tt">time · m</span></span></div>` : '<div class="cal-c cal-lab"></div>';
+  const labCell = () => labCellHTML(tides, mLo, mHi);
+  const _unusedLab = () => tides ? `<div class="cal-c cal-lab" aria-hidden="true"><span class="top"></span><span class="tide-grp"><span class="b4 lab"><span>Sky</span><span>Temp °C</span><span>Wind kn</span></span><span class="wv4 lab">Waves m</span><span class="mini lab"><span>${mHi.toFixed(1)}</span><span>Tide m</span><span>${mLo.toFixed(1)}</span></span><span class="tt">Hi/Lo</span><span class="tt">time · m</span></span></div>` : '<div class="cal-c cal-lab"></div>';
   let html = '<div class="cal-h"></div>' + WD.map(d => `<div class="cal-h">${d}</div>`).join('');
   let col = 0;
   const push = cell => { if (col % 7 === 0) html += labCell(); html += cell; col++; };
   for (let i = 0; i < lead; i++) push('<div class="cal-c empty"></div>');
   for (let d = 1; d <= days; d++){
     const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const ev = tides?.byDay[key] || [];
-    const hi = ev.filter(e => e.high).map(e => e.v), lo = ev.filter(e => !e.high).map(e => e.v);
-    const range = hi.length && lo.length ? Math.max(...hi) - Math.min(...lo) : null;
-    if (range != null) ranges.push(range);
-    const p = moonPhase(Date.UTC(y, m, d, 20));
-    push(`<button type="button" class="cal-c${key === todayKey ? ' today' : ''}${key < todayKey ? ' pastday' : ''}${key === calState.sel ? ' sel' : ''}" data-key="${key}" data-range="${range ?? ''}">` +
-      `<span class="top" title="${phases[key] || moonName(p)}">${d}${moonSVG(p, 16)}</span>` +
-      (tides ? `<span class="tide-grp">${blocksHTML(key, wxd)}<span class="wv4">${[0,1,2,3].map(b => `<span class="wv${blockStart(key, b) + 6*3600e3 <= Date.now() ? ' past' : ''}" data-key="${key}" data-b="${b}"></span>`).join('')}</span><span class="mini">${miniTide(localMidnight(new Date(Date.UTC(y, m, d, 20))), tides.ev, mLo, mHi)}</span>` : '') +
-      (ev.length ? ev.map(e => `<span class="tt ${e.high ? 'hi' : 'lo'}${e.t < Date.now() ? ' gone' : ''}" title="${e.high ? 'High' : 'Low'} ${fmt(e.t,{hour:'numeric',minute:'2-digit'})}, ${e.v.toFixed(1)} m"><i>${e.high ? '▲' : '▼'}</i>${shortTime(e.t)} <em>${e.v.toFixed(1)}</em></span>`).join('') : (tides ? '<span class="tt">–</span>' : '')) + (tides ? '</span>' : '') +
-      `</button>`);
+    const c = dayCellHTML(key, tides, mLo, mHi, wxd, phases, todayKey);
+    if (c.range != null) ranges.push(c.range);
+    push(c.html);
   }
   grid.innerHTML = html;
   // Collapse past days to just their date; a week that's entirely past shrinks to one thin row
@@ -1744,7 +1794,9 @@ async function renderCal(){
   try { grid.classList.toggle('hidepast', !localStorage.getItem('cal-showpast')); } catch(e){}
   setTog();
   renderInsights(y, m, days, tides, phases, wxd);
-  if (tides) loadBlockWinds(y, m, days, tides.st);
+  if (tides){ const keys = []; for (let d = 1; d <= days; d++) keys.push(`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+    const code = calStation.value; loadBlockWinds(grid, keys, tides.st, () => !document.getElementById('calx')?.open || calState.y !== y || calState.m !== m || calStation.value !== code); }
+  renderWeek();
   grid.querySelectorAll('.cal-c[data-key]').forEach(c => c.addEventListener('click', () => { calState.sel = c.dataset.key; grid.querySelectorAll('.cal-c').forEach(x => x.classList.toggle('sel', x === c)); renderDay(); }));
   if (!tides) document.getElementById('cal-day').innerHTML = '<p class="note">Couldn\'t load tides for this month.</p>';
   else if (calState.sel && calState.sel.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)) renderDay();
@@ -1824,9 +1876,17 @@ async function renderDay(){
 function openCal(){
   const now = new Date(), k = localKey(now).split('-').map(Number);
   if (!calState.y){ calState.y = k[0]; calState.m = k[1] - 1; calState.sel = localKey(now); }
-  document.getElementById('cal').hidden = false;
+  const x = document.getElementById('calx'); x.open = true;
+  document.querySelector('details[data-pane="tides2"]').open = true;
+  setTimeout(() => x.scrollIntoView({behavior:'smooth', block:'start'}), 50);
   renderCal();
 }
+// The month calendar lives in the side panel now, under the next 7 days
+(() => {
+  const host = document.getElementById('calhost'), card = document.querySelector('#cal .cal-card');
+  if (host && card){ host.appendChild(card); document.getElementById('cal-close').hidden = true; card.querySelector('#cal-title').hidden = true; }
+  document.getElementById('calx').addEventListener('toggle', e => { if (e.target.open){ if (!calState.y){ const k = localKey(new Date()).split('-').map(Number); calState.y = k[0]; calState.m = k[1] - 1; calState.sel = localKey(new Date()); } renderCal(); } });
+})();
 document.getElementById('calbtn').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openCal(); });
 document.getElementById('cal-close').addEventListener('click', () => document.getElementById('cal').hidden = true);
 // Tap outside the calendar card (the dimmed area) to close it
@@ -1947,7 +2007,7 @@ async function loadWx(){
       hourly: (f.properties.hourlyForecastGroup?.hourlyForecasts || []).map(h => ({t: Date.parse(h.timestamp), icon: h.iconCode?.url, cond: h.condition?.en, temp: h.temperature?.value?.en, pop: h.lop?.value?.en}))}))
       .filter(t => WX_TOWNS.test(t.name) && t.days.length);
     setWxStatus(wxData.length ? 'ok' : 'bad', wxData.length ? 'live' : 'failed');
-    if (!document.getElementById('cal').hidden) renderCal();
+    if (document.getElementById('calx').open) renderCal(); else renderWeek();
   } catch(e){ setWxStatus('bad', 'failed'); }
   drawWx();
 }
