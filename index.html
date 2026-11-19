@@ -505,8 +505,40 @@ async function pickLayer(candidates){
   }
   return null;
 }
+// Weather tiles drawn on a canvas with the land cut out, so wind and waves only show on the water
+let LAND_BOX = null;
+function landBoxes(){
+  return LAND_BOX || (LAND_BOX = LAND.map(poly => { let x0=180,y0=90,x1=-180,y1=-90;
+    for (const [x,y] of poly[0]){ if (x<x0)x0=x; if (x>x1)x1=x; if (y<y0)y0=y; if (y>y1)y1=y; } return {poly, x0, y0, x1, y1}; }));
+}
+function cutLand(g, coords, size, mapRef){
+  const nw = mapRef.unproject(coords.scaleBy(size), coords.z), se = mapRef.unproject(coords.add([1,1]).scaleBy(size), coords.z);
+  const pad = 0.02, origin = coords.scaleBy(size), sx = g.canvas.width / size.x, sy = g.canvas.height / size.y;
+  g.save(); g.globalCompositeOperation = 'destination-out'; g.beginPath();
+  let any = false;
+  for (const b of landBoxes()){
+    if (b.x1 < nw.lng - pad || b.x0 > se.lng + pad || b.y1 < se.lat - pad || b.y0 > nw.lat + pad) continue;
+    for (const ring of b.poly){
+      ring.forEach(([x, y], i) => { const p = mapRef.project([y, x], coords.z).subtract(origin); i ? g.lineTo(p.x*sx, p.y*sy) : g.moveTo(p.x*sx, p.y*sy); });
+      g.closePath(); any = true;
+    }
+  }
+  if (any) g.fill('evenodd');
+  g.restore();
+}
+const SeaOnlyWMS = L.TileLayer.WMS.extend({
+  createTile(coords, done){
+    const size = this.getTileSize(), c = document.createElement('canvas');
+    c.width = size.x; c.height = size.y;
+    const img = new Image();
+    img.onload = () => { const g = c.getContext('2d'); g.drawImage(img, 0, 0, size.x, size.y); try { cutLand(g, coords, size, this._map); } catch(e){} done(null, c); };
+    img.onerror = e => done(e, c);
+    img.src = this.getTileUrl(coords);
+    return c;
+  }
+});
 function wms(name, opacity, styles='', sharpen=1){
-  const l = L.tileLayer.wms(CONFIG.geomet, {layers:name, styles, format:'image/png', transparent:true, version:'1.3.0', opacity, maxZoom:20, attribution:'Environment Canada'});
+  const l = new SeaOnlyWMS(CONFIG.geomet, {layers:name, styles, format:'image/png', transparent:true, version:'1.3.0', opacity, maxZoom:20, attribution:'Environment Canada'});
   // Ask for a sharper image and shrink it into each tile: symbols come out narrower
   l.wmsParams.width = l.wmsParams.height = Math.round(256 * sharpen);
   return l;
