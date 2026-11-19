@@ -277,6 +277,12 @@ details.pane>summary .calbtn{margin:0 10px 0 auto;padding:3px 9px;font-size:12px
 #calhost .cal-h{top:-16px}
 .calx > summary{cursor:pointer;font-weight:600;padding:6px 0;color:var(--pin)}
 aside .cal-lab .lab,aside .cal-lab .tt{font-size:7.5px}
+/* Wind: small speed number above the arrow */
+.cal-c .bk .wd{flex-direction:column;align-items:center;height:19px !important;gap:0}
+.cal-c .bk .wd .n{display:block !important;font-size:7.5px;line-height:8px;letter-spacing:-.02em}
+.cal-c .bk .wd .dir{line-height:10px}
+.cal-c .b4{height:42px !important}
+.cal-lab .b4.lab span:last-child{height:19px !important}
 .cal-tide{font-size:13px;color:var(--muted);padding:6px 4px;white-space:nowrap}
 .cal-bar #cal-wx{margin-left:auto}
 .sos-card.pan{border-top-color:#e8890c}
@@ -1661,7 +1667,7 @@ function paintWind(root, key, b, w, loc, src){
   if (!el || !w) return;
   const cls = w.kn < 10 ? 'c' : w.kn < 20 ? 'w' : 'x';
   el.className = 'wd ' + cls + (w.dir == null ? ' so' : '');
-  el.innerHTML = (w.dir != null ? `<span class="dir" style="transform:rotate(${(w.dir + 180) % 360}deg)">↑</span>` : '') + `<span class="n">${w.kn.toFixed(0)}</span>`;
+  el.innerHTML = `<span class="n">${w.kn.toFixed(0)}</span>` + (w.dir != null ? `<span class="dir" style="transform:rotate(${(w.dir + 180) % 360}deg)">↑</span>` : '');
   el.parentElement.title += ` · wind ${w.dir != null ? compass(w.dir) + ' ' : ''}${w.kn.toFixed(0)} kn${w.max ? ' (strongest hour ' + w.max.toFixed(0) + ' kn)' : ''}${src && !el.parentElement.title.includes(src) ? ' · ' + src : ''}`;
   if (w.dir == null) return;
   const hs = waveHeight(w.kn, fetchMetres(loc.lat, loc.lon, w.dir));
