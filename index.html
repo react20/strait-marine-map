@@ -160,6 +160,17 @@ section{display:flex;flex-direction:column}
 .chat-rad b{color:var(--fg)}
 .chat-conv.all{border-style:dashed}
 .bub .bc{display:block;font-size:10px;font-weight:700;letter-spacing:.03em;opacity:.8;margin-bottom:2px}
+.chat-cam{display:flex;align-items:center;justify-content:center;width:36px;flex:none;color:var(--pin);cursor:pointer;border:1px solid var(--line);border-radius:4px}
+.chat-prev{display:flex;align-items:center;gap:8px;padding:6px 10px 0}
+.chat-prev[hidden],.chat-lb[hidden]{display:none}
+.chat-prev img{height:56px;max-width:120px;object-fit:cover;border-radius:4px}
+.chat-prev small{color:var(--muted);font-size:11px}
+.bub img.chat-img{display:block;max-width:100%;max-height:220px;min-width:80px;min-height:60px;border-radius:6px;margin-bottom:3px;cursor:zoom-in;background:rgba(0,0,0,.08);object-fit:cover}
+.chat-lb{position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+.chat-lb{flex-direction:column;gap:12px}
+.chat-lb img{max-width:96vw;max-height:78vh;border-radius:4px}
+.chat-lb-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;cursor:default}
+.chat-lb-st{color:#ddd;font:12px var(--sans);text-align:center;max-width:90vw}
 .chat-note{margin:0;padding:0 12px 8px;font-size:10.5px;color:var(--muted)}
 .chat-empty{color:var(--muted);text-align:center;margin:20px 0}
 .msg-toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));z-index:1960;max-width:calc(100% - 40px);background:#0a7d6e;color:#fff;padding:9px 14px;border-radius:6px;box-shadow:0 3px 12px rgba(0,0,0,.4);cursor:pointer;font:600 13px var(--sans)}
@@ -448,7 +459,9 @@ a{color:var(--pin)}
   <div class="chat-h"><button type="button" class="linkbtn" id="chat-back" hidden>‹ All</button><span class="chat-tt"><b id="chat-title">Messages</b><small id="chat-sub"></small></span><button type="button" class="chat-x" id="chat-x" aria-label="Close">×</button></div>
   <div class="chat-body" id="chat-body"></div>
   <div class="chat-rad" id="chat-rad-row" hidden>Send to every live boat within <select id="chat-rad"><option>1</option><option>2</option><option selected>5</option><option>10</option><option>20</option></select> nm of you · <b id="chat-rad-n">…</b></div>
-  <form class="chat-f" id="chat-f" hidden><input type="text" id="chat-in" maxlength="500" placeholder="Message…" autocomplete="off"><button type="submit" class="gbtn">Send</button></form>
+  <div class="chat-prev" id="chat-prev" hidden><img id="chat-prev-img" alt="Photo to send"><button type="button" class="chat-x" id="chat-prev-x" aria-label="Remove photo">×</button><small id="chat-prev-st"></small></div>
+  <form class="chat-f" id="chat-f" hidden><label class="chat-cam" title="Send a photo" aria-label="Send a photo"><input type="file" id="chat-file" accept="image/*" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="4"/></svg></label><input type="text" id="chat-in" maxlength="500" placeholder="Message…" autocomplete="off"><button type="submit" class="gbtn">Send</button></form>
+<div class="chat-lb" id="chat-lb" hidden><img id="chat-lb-img" alt="Photo"><div class="chat-lb-bar"><button type="button" class="gbtn" id="chat-lb-share">Share to Instagram, Facebook, Threads…</button><button type="button" class="gbtn" id="chat-lb-save">Save photo</button><button type="button" class="gbtn" id="chat-lb-close">Close</button></div><small class="chat-lb-st" id="chat-lb-st"></small></div>
   <p class="chat-note">Sound for new messages: <select class="chat-snd" id="chat-snd"><option value="chime">Chime</option><option value="horn">Boat horn</option><option value="off">Off</option></select> <button type="button" class="linkbtn" id="chat-snd-test">Play</button><br>Only signed-in users can message. Messages are kept 7 days. Not a substitute for VHF Ch 16 in an emergency.</p>
 </div>
 <div class="msg-toast" id="msg-toast" hidden></div>
@@ -2344,12 +2357,12 @@ function setupLive(db){
       const convs = new Map(); for (const m of list) convs.set(peerOf(m), m);   // last message per boat
       const allBtn = document.createElement('button'); allBtn.type = 'button'; allBtn.className = 'chat-conv all';
       const lastAll = convs.get(ALL); convs.delete(ALL);
-      allBtn.innerHTML = `<b>📢 Everyone nearby</b><small>${lastAll ? 'You: ' + esc(lastAll.text) : 'Send one message to every live boat around you'}</small>`;
+      allBtn.innerHTML = `<b>📢 Everyone nearby</b><small>${lastAll ? 'You: ' + (lastAll.photo ? '📷 ' : '') + esc(lastAll.text || (lastAll.photo ? 'Photo' : '')) : 'Send one message to every live boat around you'}</small>`;
       allBtn.onclick = () => openChat(ALL); body.appendChild(allBtn);
       if (!convs.size){ body.insertAdjacentHTML('beforeend', '<p class="chat-empty">No conversations yet.<br>Tap a green boat on the map, then <b>Message</b>.</p>'); return; }
       [...convs].sort((a, b) => tms(b[1]) - tms(a[1])).forEach(([uid, m]) => {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'chat-conv' + (unreadFrom(uid).length ? ' unread' : '');
-        b.innerHTML = `<b>${esc(nameOf(uid))}${others.has(uid) ? ' · live' : ''}</b><small>${m.from === user.uid ? 'You: ' : ''}${esc(m.text)}</small>`;
+        b.innerHTML = `<b>${esc(nameOf(uid))}${others.has(uid) ? ' · live' : ''}</b><small>${m.from === user.uid ? 'You: ' : ''}${m.photo ? '📷 ' : ''}${esc(m.text || (m.photo ? 'Photo' : ''))}</small>`;
         b.onclick = () => openChat(uid); body.appendChild(b);
       });
       return;
@@ -2368,11 +2381,12 @@ function setupLive(db){
     if (!thread.length) body.innerHTML = peer === ALL ? '<p class="chat-empty">Your message goes to every boat that is sharing its live location within the distance below. Replies come back to you one-to-one.</p>' : `<p class="chat-empty">Say hello to ${esc(nameOf(peer))}.</p>`;
     for (const m of thread){
       const d = document.createElement('div'); d.className = 'bub ' + (m.from === user.uid ? 'me' : 'them');
-      d.innerHTML = (m.bc && m.from !== user.uid ? '<span class="bc">📢 TO EVERYONE NEARBY</span>' : '') + esc(m.text)
+      d.innerHTML = (m.bc && m.from !== user.uid ? '<span class="bc">📢 TO EVERYONE NEARBY</span>' : '') + (m.photo ? `<img class="chat-img" data-pid="${esc(m.photo)}" alt="Photo">` : '') + esc(m.text || '')
         + `<small>${fmt(new Date(tms(m)), {weekday:'short', hour:'numeric', minute:'2-digit'})}${m.n ? ' · to ' + m.n + ' boat' + (m.n > 1 ? 's' : '') : ''}${m.pending ? ' · sending…' : ''}</small>`;
       body.appendChild(d);
     }
     body.scrollTop = body.scrollHeight;
+    loadPhotos().then(() => { body.scrollTop = body.scrollHeight; });
     // Mark what I can see as read
     unreadFrom(peer).forEach(m => { m.read = true; db.collection('msgs').doc(m.id).update({read: true}).catch(() => {}); });
     renderBadge();
@@ -2407,30 +2421,95 @@ function setupLive(db){
     radN.textContent = n.length ? n.length + ' boat' + (n.length > 1 ? 's' : '') + ' in range' : 'no live boats in range';
   }
   radSel.addEventListener('change', () => { try { localStorage.setItem('chat-rad', radSel.value); } catch(e){} updateRad(); });
-  async function sendAll(text){
-    const to = nearby();
-    if (!to || !to.length){ updateRad(); input.value = text; return; }
-    const bc = db.collection('msgs').doc().id, batch = db.batch(), ids = [];
-    for (const uid of to){
-      const ref = db.collection('msgs').doc(); ids.push(ref.id);
-      msgs.set(ref.id, {id: ref.id, from: user.uid, to: uid, bc, text, pending: true});
-      batch.set(ref, {from: user.uid, fromName: myName(), to: uid, toName: nameOf(uid).slice(0, 40), text, bc, read: false,
-                      t: firebase.firestore.FieldValue.serverTimestamp()});
+  // ---------- Photos: shrunk on the phone to about 1280 px, stored once in photos/{id}, linked from each message ----------
+  const fileIn = document.getElementById('chat-file'), prevBox = document.getElementById('chat-prev'), prevImg = document.getElementById('chat-prev-img');
+  const prevSt = document.getElementById('chat-prev-st'), lb = document.getElementById('chat-lb'), lbImg = document.getElementById('chat-lb-img');
+  const photoCache = new Map();
+  let pendingPhoto = null;
+  function shrink(file){
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(file), img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, 1280 / Math.max(w, h)); w = Math.round(w * k); h = Math.round(h * k);
+        const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
+        let q = 0.75, data = c.toDataURL('image/jpeg', q);
+        while (data.length > 700000 && q > 0.3){ q -= 0.1; data = c.toDataURL('image/jpeg', q); }   // stay well under Firestore's 1 MB limit
+        if (data.length > 900000){ const c2 = document.createElement('canvas'); c2.width = Math.round(w * 0.6); c2.height = Math.round(h * 0.6);
+          c2.getContext('2d').drawImage(c, 0, 0, c2.width, c2.height); data = c2.toDataURL('image/jpeg', 0.6); }
+        res(data);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('not an image')); };
+      img.src = url;
+    });
+  }
+  fileIn.addEventListener('change', async () => {
+    const f = fileIn.files && fileIn.files[0]; fileIn.value = ''; if (!f) return;
+    prevBox.hidden = false; prevImg.removeAttribute('src'); prevSt.textContent = 'Preparing photo…';
+    try { pendingPhoto = await shrink(f); prevImg.src = pendingPhoto; prevSt.textContent = 'Add a caption if you like, then Send'; }
+    catch(e){ pendingPhoto = null; prevSt.textContent = 'Could not read that photo'; }
+  });
+  const clearPhoto = () => { pendingPhoto = null; prevBox.hidden = true; prevImg.removeAttribute('src'); };
+  document.getElementById('chat-prev-x').addEventListener('click', clearPhoto);
+  const closeLb = () => { lb.hidden = true; lbImg.removeAttribute('src'); document.getElementById('chat-lb-st').textContent = ''; };
+  lb.addEventListener('click', e => { if (e.target === lb || e.target === lbImg) closeLb(); });
+  document.getElementById('chat-lb-close').addEventListener('click', closeLb);
+  // Turn the photo into a real file so the phone's share sheet can hand it to Instagram, Facebook, Threads, WhatsApp, etc.
+  const photoFile = async () => { const blob = await (await fetch(lbImg.src)).blob();
+    return new File([blob], 'strait-photo-' + new Date().toISOString().slice(0, 10) + '.jpg', {type: 'image/jpeg'}); };
+  async function savePhoto(){
+    const f = await photoFile(), a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  document.getElementById('chat-lb-save').addEventListener('click', () => savePhoto().catch(() => {}));
+  document.getElementById('chat-lb-share').addEventListener('click', async () => {
+    const st = document.getElementById('chat-lb-st');
+    try {
+      const f = await photoFile();
+      if (navigator.canShare && navigator.canShare({files: [f]})){ await navigator.share({files: [f]}); return; }
+      await savePhoto();
+      st.textContent = 'This browser can\'t share photos straight to apps, so the photo was saved instead. Open Instagram, Facebook or Threads and pick it from your photos.';
+    } catch(e){ if (e && e.name !== 'AbortError') st.textContent = 'Could not share: ' + (e.message || e); }
+  });
+  body.addEventListener('click', e => { const im = e.target.closest('img.chat-img'); if (im && im.src){ lbImg.src = im.src; lb.hidden = false; } });
+  async function loadPhotos(){
+    for (const im of body.querySelectorAll('img.chat-img:not([src])')){
+      const pid = im.dataset.pid; if (!pid) continue;
+      if (!photoCache.has(pid)) photoCache.set(pid, db.collection('photos').doc(pid).get().then(d => d.exists ? d.data().data : null).catch(() => null));
+      const src = await photoCache.get(pid);
+      if (src) im.src = src; else im.alt = 'Photo unavailable';
     }
-    renderChat();
+  }
+
+  async function sendMsg(text, toList, bc){
+    const photo = pendingPhoto, batch = db.batch(), ids = [];
+    let pid = null;
+    if (photo){
+      const pref = db.collection('photos').doc(); pid = pref.id; photoCache.set(pid, Promise.resolve(photo));
+      batch.set(pref, {from: user.uid, to: toList, data: photo, t: firebase.firestore.FieldValue.serverTimestamp()});
+    }
+    for (const uid of toList){
+      const ref = db.collection('msgs').doc(); ids.push(ref.id);
+      const m = {from: user.uid, fromName: myName(), to: uid, toName: nameOf(uid).slice(0, 40), text, read: false, t: firebase.firestore.FieldValue.serverTimestamp()};
+      if (bc) m.bc = bc; if (pid) m.photo = pid;
+      msgs.set(ref.id, {id: ref.id, from: user.uid, to: uid, bc, text, photo: pid, pending: true});
+      batch.set(ref, m);
+    }
+    clearPhoto(); renderChat();
     try { await batch.commit(); }
-    catch(err){ ids.forEach(id => msgs.delete(id)); renderChat(); input.value = text; title.textContent = 'Could not send (' + (err.code || 'offline') + ')'; }
+    catch(err){ ids.forEach(id => msgs.delete(id)); if (photo){ pendingPhoto = photo; prevImg.src = photo; prevBox.hidden = false; }
+      renderChat(); input.value = text; title.textContent = 'Could not send (' + (err.code || 'offline') + ')'; }
   }
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const text = input.value.trim(); if (!text || !peer || !user) return;
+    const text = input.value.trim(); if ((!text && !pendingPhoto) || !peer || !user) return;
     input.value = '';
-    if (peer === ALL) return sendAll(text);
-    const ref = db.collection('msgs').doc();
-    msgs.set(ref.id, {id: ref.id, from: user.uid, to: peer, text, pending: true}); renderChat();
-    try { await ref.set({from: user.uid, fromName: myName(), to: peer, toName: nameOf(peer).slice(0, 40), text, read: false,
-                         t: firebase.firestore.FieldValue.serverTimestamp()}); }
-    catch(err){ msgs.delete(ref.id); renderChat(); input.value = text; title.textContent = 'Could not send (' + (err.code || 'offline') + ')'; }
+    if (peer === ALL){
+      const to = nearby();
+      if (!to || !to.length){ updateRad(); input.value = text; return; }
+      return sendMsg(text, to, db.collection('msgs').doc().id);
+    }
+    return sendMsg(text, [peer], null);
   });
 
   // ---------- Message sounds: chime or boat horn (made in the browser, no files) ----------
@@ -2472,7 +2551,7 @@ function setupLive(db){
     (kind === 'horn' ? horn : chime)(a);
   }
   function showToast(m){
-    toast.textContent = (m.bc ? '📢 ' : '') + (m.fromName || 'Boat') + (m.bc ? ' (to everyone nearby)' : '') + ': ' + m.text.slice(0, 80);
+    toast.textContent = (m.bc ? '📢 ' : '') + (m.fromName || 'Boat') + (m.bc ? ' (to everyone nearby)' : '') + ': ' + (m.photo ? '📷 ' : '') + (m.text || (m.photo ? 'Photo' : '')).slice(0, 80);
     toast.hidden = false; toast.onclick = () => openChat(m.from);
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { toast.hidden = true; }, 8000);
     try { navigator.vibrate && navigator.vibrate([120, 60, 120]); } catch(e){}

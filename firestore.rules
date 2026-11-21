@@ -24,10 +24,11 @@ service cloud.firestore {
       allow read: if request.auth != null
         && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['from', 'fromName', 'to', 'toName', 'text', 'read', 't', 'bc'])
+        && request.resource.data.keys().hasOnly(['from', 'fromName', 'to', 'toName', 'text', 'read', 't', 'bc', 'photo'])
         && request.resource.data.from == request.auth.uid
         && request.resource.data.to is string && request.resource.data.to != request.auth.uid
-        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
+        && request.resource.data.text is string && request.resource.data.text.size() <= 500
+        && (request.resource.data.text.size() > 0 || ('photo' in request.resource.data && request.resource.data.photo is string))
         && request.resource.data.fromName is string && request.resource.data.fromName.size() <= 40
         && request.resource.data.toName is string && request.resource.data.toName.size() <= 40
         && request.resource.data.read == false
@@ -38,6 +39,19 @@ service cloud.firestore {
         && request.resource.data.read == true;
       allow delete: if request.auth != null
         && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+    }
+    // Photos sent in messages: stored once, readable only by the sender and the boats it was sent to
+    match /photos/{id} {
+      allow read: if request.auth != null
+        && (resource.data.from == request.auth.uid || request.auth.uid in resource.data.to);
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['from', 'to', 'data', 't'])
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.to is list && request.resource.data.to.size() >= 1 && request.resource.data.to.size() <= 100
+        && request.resource.data.data is string && request.resource.data.data.size() <= 950000
+        && request.resource.data.data.matches('^data:image/jpeg;base64,.*')
+        && request.resource.data.t == request.time;
+      allow delete: if request.auth != null && resource.data.from == request.auth.uid;
     }
   }
 }
