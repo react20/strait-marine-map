@@ -49,7 +49,6 @@ service cloud.firestore {
         && request.resource.data.from == request.auth.uid
         && request.resource.data.to is list && request.resource.data.to.size() >= 1 && request.resource.data.to.size() <= 100
         && request.resource.data.data is string && request.resource.data.data.size() <= 950000
-        && request.resource.data.data.matches('^data:image/jpeg;base64,.*')
         && request.resource.data.t == request.time;
       allow delete: if request.auth != null && resource.data.from == request.auth.uid;
     }
