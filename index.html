@@ -151,6 +151,12 @@ section{display:flex;flex-direction:column}
 .bub.me{align-self:flex-end;background:#0a7d6e;color:#fff}
 .chat-f{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}
 .chat-f input{flex:1;min-width:0;font:14px var(--sans);padding:7px 8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--fg)}
+.chat-rad{padding:7px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.chat-rad[hidden]{display:none}
+.chat-rad select{font:12px var(--sans)}
+.chat-rad b{color:var(--fg)}
+.chat-conv.all{border-style:dashed}
+.bub .bc{display:block;font-size:10px;font-weight:700;letter-spacing:.03em;opacity:.8;margin-bottom:2px}
 .chat-note{margin:0;padding:0 12px 8px;font-size:10.5px;color:var(--muted)}
 .chat-empty{color:var(--muted);text-align:center;margin:20px 0}
 .msg-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(120px + env(safe-area-inset-bottom,0px));z-index:1960;max-width:calc(100% - 40px);background:#0a7d6e;color:#fff;padding:9px 14px;border-radius:6px;box-shadow:0 3px 12px rgba(0,0,0,.4);cursor:pointer;font:600 13px var(--sans)}
@@ -436,6 +442,7 @@ a{color:var(--pin)}
 <div class="chat" id="chat" hidden role="dialog" aria-label="Messages">
   <div class="chat-h"><button type="button" class="linkbtn" id="chat-back" hidden>‹ All</button><b id="chat-title">Messages</b><button type="button" class="chat-x" id="chat-x" aria-label="Close">×</button></div>
   <div class="chat-body" id="chat-body"></div>
+  <div class="chat-rad" id="chat-rad-row" hidden>Send to every live boat within <select id="chat-rad"><option>1</option><option>2</option><option selected>5</option><option>10</option><option>20</option></select> nm of you · <b id="chat-rad-n">…</b></div>
   <form class="chat-f" id="chat-f" hidden><input type="text" id="chat-in" maxlength="500" placeholder="Message…" autocomplete="off"><button type="submit" class="gbtn">Send</button></form>
   <p class="chat-note">Only signed-in users can message. Messages are kept 7 days. Not a substitute for VHF Ch 16 in an emergency.</p>
 </div>
@@ -2203,7 +2210,7 @@ function setupLive(db){
     const since = firebase.firestore.Timestamp.fromMillis(Date.now() - 6 * 3600e3);
     unsub = db.collection('live').where('t', '>', since).onSnapshot(snap => {
       snap.docChanges().forEach(c => c.type === 'removed' ? others.delete(c.doc.id) : others.set(c.doc.id, c.doc.data()));
-      draw(); try { renderChat(); } catch(e){}
+      draw(); try { if (peer === ALL && !chat.hidden) updateRad(); else renderChat(); } catch(e){}
     }, () => setStatus('bad', 'failed'));
   }
 
@@ -2254,8 +2261,9 @@ function setupLive(db){
   const KEEP_MS = 7 * 86400e3;
   let msgs = new Map(), msgUnsubs = [], peer = null, firstLoad = true, toastTimer = null;
   const tms = m => m.t && m.t.toMillis ? m.t.toMillis() : Date.now();
-  const peerOf = m => m.from === user.uid ? m.to : m.from;
-  const nameOf = uid => { const o = others.get(uid); if (o && o.name) return o.name;
+  const ALL = '*all';   // the "everyone nearby" conversation
+  const peerOf = m => m.from === user.uid ? (m.bc ? ALL : m.to) : m.from;
+  const nameOf = uid => { if (uid === ALL) return 'Everyone nearby'; const o = others.get(uid); if (o && o.name) return o.name;
     let best = null; for (const m of msgs.values()){ if (m.from === uid && m.fromName && (!best || tms(m) > best.t)) best = {n:m.fromName, t:tms(m)};
       if (m.to === uid && m.toName && !best) best = {n:m.toName, t:0}; } return best ? best.n : 'Boat'; };
   const unreadFrom = uid => [...msgs.values()].filter(m => m.to === user.uid && !m.read && (uid == null || m.from === uid));
@@ -2268,7 +2276,11 @@ function setupLive(db){
     if (!peer){
       title.textContent = 'Messages'; back.hidden = true; form.hidden = true;
       const convs = new Map(); for (const m of list) convs.set(peerOf(m), m);   // last message per boat
-      if (!convs.size){ body.innerHTML = '<p class="chat-empty">No messages yet.<br>Tap a green boat on the map, then <b>Message</b>.</p>'; return; }
+      const allBtn = document.createElement('button'); allBtn.type = 'button'; allBtn.className = 'chat-conv all';
+      const lastAll = convs.get(ALL); convs.delete(ALL);
+      allBtn.innerHTML = `<b>📢 Everyone nearby</b><small>${lastAll ? 'You: ' + esc(lastAll.text) : 'Send one message to every live boat around you'}</small>`;
+      allBtn.onclick = () => openChat(ALL); body.appendChild(allBtn);
+      if (!convs.size){ body.insertAdjacentHTML('beforeend', '<p class="chat-empty">No conversations yet.<br>Tap a green boat on the map, then <b>Message</b>.</p>'); return; }
       [...convs].sort((a, b) => tms(b[1]) - tms(a[1])).forEach(([uid, m]) => {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'chat-conv' + (unreadFrom(uid).length ? ' unread' : '');
         b.innerHTML = `<b>${esc(nameOf(uid))}${others.has(uid) ? ' · live' : ''}</b><small>${m.from === user.uid ? 'You: ' : ''}${esc(m.text)}</small>`;
@@ -2277,11 +2289,17 @@ function setupLive(db){
       return;
     }
     title.textContent = nameOf(peer); back.hidden = false; form.hidden = false;
-    const thread = list.filter(m => peerOf(m) === peer);
-    if (!thread.length) body.innerHTML = `<p class="chat-empty">Say hello to ${esc(nameOf(peer))}.</p>`;
+    radRow.hidden = peer !== ALL; if (peer === ALL) updateRad();
+    let thread = list.filter(m => peerOf(m) === peer);
+    if (peer === ALL){   // one bubble per broadcast, with how many boats it went to
+      const g = new Map(); for (const m of thread){ const x = g.get(m.bc); if (x) x.n++; else g.set(m.bc, {...m, n:1}); }
+      thread = [...g.values()];
+    }
+    if (!thread.length) body.innerHTML = peer === ALL ? '<p class="chat-empty">Your message goes to every boat that is sharing its live location within the distance below. Replies come back to you one-to-one.</p>' : `<p class="chat-empty">Say hello to ${esc(nameOf(peer))}.</p>`;
     for (const m of thread){
       const d = document.createElement('div'); d.className = 'bub ' + (m.from === user.uid ? 'me' : 'them');
-      d.innerHTML = esc(m.text) + `<small>${fmt(new Date(tms(m)), {weekday:'short', hour:'numeric', minute:'2-digit'})}${m.pending ? ' · sending…' : ''}</small>`;
+      d.innerHTML = (m.bc && m.from !== user.uid ? '<span class="bc">📢 TO EVERYONE NEARBY</span>' : '') + esc(m.text)
+        + `<small>${fmt(new Date(tms(m)), {weekday:'short', hour:'numeric', minute:'2-digit'})}${m.n ? ' · to ' + m.n + ' boat' + (m.n > 1 ? 's' : '') : ''}${m.pending ? ' · sending…' : ''}</small>`;
       body.appendChild(d);
     }
     body.scrollTop = body.scrollHeight;
@@ -2289,7 +2307,7 @@ function setupLive(db){
     unreadFrom(peer).forEach(m => { m.read = true; db.collection('msgs').doc(m.id).update({read: true}).catch(() => {}); });
     renderBadge();
   }
-  function openChat(uid){ if (!user) return; peer = uid || null; chat.hidden = false; toast.hidden = true; renderChat(); if (peer && !IS_PHONE_UA) input.focus(); }
+  function openChat(uid){ if (!user) return; peer = uid || null; chat.hidden = false; if (!peer) radRow.hidden = true; toast.hidden = true; renderChat(); if (peer && !IS_PHONE_UA) input.focus(); }
   document.getElementById('msg-open').addEventListener('click', () => openChat(null));
   document.getElementById('chat-x').addEventListener('click', () => { chat.hidden = true; peer = null; });
   back.addEventListener('click', () => openChat(null));
@@ -2297,10 +2315,47 @@ function setupLive(db){
     const b = e.popup.getElement()?.querySelector('[data-msg-uid]');
     if (b) b.onclick = () => { map.closePopup(); openChat(b.dataset.msgUid); };
   });
+  const radRow = document.getElementById('chat-rad-row'), radSel = document.getElementById('chat-rad'), radN = document.getElementById('chat-rad-n');
+  try { const r = localStorage.getItem('chat-rad'); if (r) radSel.value = r; } catch(e){}
+  // Where am I? Live-sharing fix, else the "My location" fix, else ask the GPS once
+  const myPos = () => (prev && Date.now() - prev.t < 10 * 60e3 && prev.ll) || (typeof lastFix !== 'undefined' && lastFix && lastFix.ll) || null;
+  function nearby(){
+    const me = myPos(); if (!me) return null;
+    const lim = +radSel.value * 1852, now = Date.now(), out = [];
+    for (const [uid, d] of others){
+      const t = d.t && d.t.toMillis ? d.t.toMillis() : 0;
+      if (uid === user.uid || !t || now - t > STALE_MIN * 60e3) continue;
+      if (map.distance(me, [d.lat, d.lng]) <= lim) out.push(uid);
+    }
+    return out.slice(0, 100);
+  }
+  function updateRad(){
+    const n = nearby();
+    if (n == null){ radN.textContent = 'finding your position…';
+      navigator.geolocation?.getCurrentPosition(p => { prev = {ll: L.latLng(p.coords.latitude, p.coords.longitude), t: Date.now()}; updateRad(); },
+        () => { radN.textContent = 'turn on location to find boats near you'; }, {maximumAge:60000, timeout:20000}); return; }
+    radN.textContent = n.length ? n.length + ' boat' + (n.length > 1 ? 's' : '') + ' in range' : 'no live boats in range';
+  }
+  radSel.addEventListener('change', () => { try { localStorage.setItem('chat-rad', radSel.value); } catch(e){} updateRad(); });
+  async function sendAll(text){
+    const to = nearby();
+    if (!to || !to.length){ updateRad(); input.value = text; return; }
+    const bc = db.collection('msgs').doc().id, batch = db.batch(), ids = [];
+    for (const uid of to){
+      const ref = db.collection('msgs').doc(); ids.push(ref.id);
+      msgs.set(ref.id, {id: ref.id, from: user.uid, to: uid, bc, text, pending: true});
+      batch.set(ref, {from: user.uid, fromName: myName(), to: uid, toName: nameOf(uid).slice(0, 40), text, bc, read: false,
+                      t: firebase.firestore.FieldValue.serverTimestamp()});
+    }
+    renderChat();
+    try { await batch.commit(); }
+    catch(err){ ids.forEach(id => msgs.delete(id)); renderChat(); input.value = text; title.textContent = 'Could not send (' + (err.code || 'offline') + ')'; }
+  }
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const text = input.value.trim(); if (!text || !peer || !user) return;
     input.value = '';
+    if (peer === ALL) return sendAll(text);
     const ref = db.collection('msgs').doc();
     msgs.set(ref.id, {id: ref.id, from: user.uid, to: peer, text, pending: true}); renderChat();
     try { await ref.set({from: user.uid, fromName: myName(), to: peer, toName: nameOf(peer).slice(0, 40), text, read: false,
@@ -2308,7 +2363,7 @@ function setupLive(db){
     catch(err){ msgs.delete(ref.id); renderChat(); input.value = text; title.textContent = 'Could not send (' + (err.code || 'offline') + ')'; }
   });
   function showToast(m){
-    toast.textContent = (m.fromName || 'Boat') + ': ' + m.text.slice(0, 80);
+    toast.textContent = (m.bc ? '📢 ' : '') + (m.fromName || 'Boat') + (m.bc ? ' (to everyone nearby)' : '') + ': ' + m.text.slice(0, 80);
     toast.hidden = false; toast.onclick = () => openChat(m.from);
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { toast.hidden = true; }, 8000);
     try { navigator.vibrate && navigator.vibrate([120, 60, 120]); } catch(e){}

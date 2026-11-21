@@ -18,18 +18,20 @@ service cloud.firestore {
         && request.resource.data.t == request.time;
     }
     // Messages between signed-in users: only the sender and the recipient can read them.
+    // "Everyone nearby" sends one copy per boat, tagged with a shared bc id.
     // The sender writes a new message; the recipient can only flip "read" to true; either can delete.
     match /msgs/{id} {
       allow read: if request.auth != null
         && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['from', 'fromName', 'to', 'toName', 'text', 'read', 't'])
+        && request.resource.data.keys().hasOnly(['from', 'fromName', 'to', 'toName', 'text', 'read', 't', 'bc'])
         && request.resource.data.from == request.auth.uid
         && request.resource.data.to is string && request.resource.data.to != request.auth.uid
         && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
         && request.resource.data.fromName is string && request.resource.data.fromName.size() <= 40
         && request.resource.data.toName is string && request.resource.data.toName.size() <= 40
         && request.resource.data.read == false
+        && (!('bc' in request.resource.data) || (request.resource.data.bc is string && request.resource.data.bc.size() <= 40))
         && request.resource.data.t == request.time;
       allow update: if request.auth != null && resource.data.to == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
