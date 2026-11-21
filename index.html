@@ -134,7 +134,7 @@ section{display:flex;flex-direction:column}
 .live-row{flex-basis:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .live-tog{display:flex;align-items:center;gap:5px;font-weight:600;cursor:pointer}
 #live-boat{font:12px var(--sans);padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--fg);width:150px}
-.livelbl{background:#0a7d6e;color:#fff;border-radius:3px;padding:1px 5px;font:600 11px var(--sans);white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.livelbl{pointer-events:auto;cursor:pointer;background:#0a7d6e;color:#fff;border-radius:3px;padding:1px 5px;font:600 11px/15px var(--sans);height:17px;overflow:hidden;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.3)}
 .msg-badge{display:inline-block;min-width:16px;margin-left:5px;padding:0 4px;border-radius:8px;background:#c1121f;color:#fff;font-size:11px;line-height:16px;text-align:center}
 .chat{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:1950;width:340px;max-width:calc(100% - 24px);max-height:70vh;display:flex;flex-direction:column;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.35);font:13px var(--sans)}
 .chat[hidden],.msg-toast[hidden]{display:none}
@@ -2178,6 +2178,8 @@ function setupLive(db){
   try { boat.value = localStorage.getItem('live-boat') || ''; } catch(e){}
   boat.addEventListener('input', () => { try { localStorage.setItem('live-boat', boat.value); } catch(e){} lastSent = null; });
   const layer = L.layerGroup();
+  map.createPane('livelabels').style.zIndex = 650;   // above boats (600), below pop-ups (700)
+  map.getPane('livelabels').style.pointerEvents = 'none';
   const setStatus = addOverlay('live', 'Boats sharing live', 'Signed-in users who turned on "Share my live location"', layer);
   setStatus('wait', 'sign in');
   let user = null, unsub = null, watchId = null, lastSent = null, prev = null, others = new Map(), sendTimer = null;
@@ -2185,24 +2187,81 @@ function setupLive(db){
   const esc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const myName = () => (boat.value.trim() || (user && (user.displayName || '').split(' ')[0]) || 'Boat').slice(0, 40);
 
+  // Label placement: each name sits beside its boat; if it would overlap another name or boat,
+  // it moves further out and an arrow points from the name back to its boat.
+  const measure = (() => { const c = document.createElement('canvas').getContext('2d'); c.font = '600 11px "IBM Plex Sans", system-ui, sans-serif';
+    return t => Math.ceil(c.measureText(t).width) + 12; })();
+  const hit = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  function layoutLabels(boats){
+    const H = 17, BOX = 28, placed = [], arrowPts = [];
+    const inBox = (pt, q) => pt.x > q.x - 2 && pt.x < q.x + q.w + 2 && pt.y > q.y - 2 && pt.y < q.y + q.h + 2;
+    // Points along the arrow from a label at box back to its boat at p (in map pixels)
+    const arrowLine = (box, p) => { const cx = Math.max(box.x, Math.min(p.x, box.x + box.w)), cy = Math.max(box.y, Math.min(p.y, box.y + box.h));
+      const len = Math.hypot(p.x - cx, p.y - cy), pts = []; for (let k = 0; k <= len - 12; k += 4) pts.push({x: cx + (p.x - cx) * k / len, y: cy + (p.y - cy) * k / len}); return pts; };
+    const bodies = boats.map(b => ({x: b.p.x - BOX/2, y: b.p.y - BOX/2, w: BOX, h: BOX}));
+    // Order: busiest spots first get the closest slots
+    const order = boats.map((b, i) => i).sort((i, j) => boats[i].p.y - boats[j].p.y || boats[i].p.x - boats[j].p.x);
+    for (const i of order){
+      const b = boats[i], W = measure(b.name);
+      const near = [[14, -H/2], [-14 - W, -H/2], [-W/2, -14 - H], [-W/2, 14]];   // right, left, above, below
+      const cands = near.map(o => ({dx:o[0], dy:o[1], arrow:false}));
+      for (const r of [44, 64, 90, 124]) for (let k = 0; k < 12; k++){
+        const a = k * Math.PI / 6 - Math.PI / 12, cx = Math.cos(a) * r, cy = Math.sin(a) * r;
+        cands.push({dx: cx - W/2, dy: cy - H/2, arrow:true});
+      }
+      let pick = cands[cands.length - 1];
+      for (const c of cands){
+        const box = {x: b.p.x + c.dx, y: b.p.y + c.dy, w: W, h: H};
+        if (placed.some(q => hit(box, q))) continue;
+        if (bodies.some((q, j) => j !== i && hit(box, q))) continue;
+        if (arrowPts.some(pt => inBox(pt, box))) continue;                       // don't sit on another boat's arrow
+        if (c.arrow && arrowLine(box, b.p).some(pt => placed.some(q => inBox(pt, q)))) continue;   // arrow mustn't cross a name
+        pick = c; break;
+      }
+      const box = {x: b.p.x + pick.dx, y: b.p.y + pick.dy, w: W, h: H};
+      placed.push(box);
+      if (pick.arrow) arrowPts.push(...arrowLine(box, b.p));
+      b.lab = {...pick, w: W, h: H};
+    }
+  }
+  function arrowSvg(L0){
+    // Line from the label's nearest edge to just outside the boat icon, with an arrowhead at the boat
+    const cx = Math.max(L0.dx, Math.min(0, L0.dx + L0.w)), cy = Math.max(L0.dy, Math.min(0, L0.dy + L0.h));
+    const len = Math.hypot(cx, cy); if (len < 16) return '';
+    const ux = -cx / len, uy = -cy / len, ex = cx + ux * (len - 13), ey = cy + uy * (len - 13);
+    const hx = ex - ux * 7, hy = ey - uy * 7, px = -uy * 4, py = ux * 4;
+    const minX = Math.min(cx, ex, hx + px, hx - px) - 2, minY = Math.min(cy, ey, hy + py, hy - py) - 2;
+    const w = Math.max(cx, ex, hx + px, hx - px) + 2 - minX, h = Math.max(cy, ey, hy + py, hy - py) + 2 - minY;
+    const f = (x, y) => `${(x - minX + 0).toFixed(1)},${(y - minY).toFixed(1)}`;
+    return `<svg class="livearrow" width="${w}" height="${h}" style="position:absolute;left:${13 + minX}px;top:${13 + minY}px;overflow:visible;pointer-events:none">`
+      + `<line x1="${(cx - minX).toFixed(1)}" y1="${(cy - minY).toFixed(1)}" x2="${(hx - minX).toFixed(1)}" y2="${(hy - minY).toFixed(1)}" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>`
+      + `<line x1="${(cx - minX).toFixed(1)}" y1="${(cy - minY).toFixed(1)}" x2="${(hx - minX).toFixed(1)}" y2="${(hy - minY).toFixed(1)}" stroke="#0a7d6e" stroke-width="1.6" stroke-linecap="round"/>`
+      + `<polygon points="${f(ex, ey)} ${f(hx + px, hy + py)} ${f(hx - px, hy - py)}" fill="#0a7d6e" stroke="#fff" stroke-width="1"/></svg>`;
+  }
   function draw(){
     layer.clearLayers();
-    const now = Date.now(); let n = 0;
+    const now = Date.now(), boats = [];
     for (const [uid, d] of others){
       const t = d.t && d.t.toMillis ? d.t.toMillis() : 0;
       if (!t || now - t > STALE_MIN * 60e3 || (user && uid === user.uid)) continue;
-      n++;
+      boats.push({uid, d, t, name: String(d.name || 'Boat'), p: map.latLngToLayerPoint([d.lat, d.lng])});
+    }
+    layoutLabels(boats);
+    for (const {uid, d, t, name, lab} of boats){
       const rot = d.cog != null && (d.sog ?? 0) > 0.5 ? d.cog : null;
       const svg = rot != null
-        ? `<svg viewBox="0 0 26 26" width="26" height="26" style="transform:rotate(${rot}deg)"><path d="M13 2 L21 23 L13 18 L5 23 Z" fill="#0a7d6e" stroke="#fff" stroke-width="2"/></svg>`
-        : `<svg viewBox="0 0 26 26" width="26" height="26"><circle cx="13" cy="13" r="7" fill="#0a7d6e" stroke="#fff" stroke-width="2.5"/></svg>`;
-      const icon = L.divIcon({className:'', iconSize:[26,26], iconAnchor:[13,13], html: svg + `<span class="livelbl" style="position:absolute;left:24px;top:4px">${esc(d.name || 'Boat')}</span>`});
-      L.marker([d.lat, d.lng], {icon, keyboard:false})
-        .bindPopup(`<b>${esc(d.name || 'Boat')}</b><br>${d.sog != null ? d.sog.toFixed(1) + ' kn' : 'speed —'}${rot != null ? ' · ' + Math.round(rot) + '°' : ''}<br><small>Updated ${ago(now - t)} · ±${Math.round(d.acc || 0)} m</small><br><button type="button" class="gbtn livepop-msg" data-msg-uid="${esc(uid)}" data-msg-name="${esc(d.name || 'Boat')}">Message</button>`)
-        .addTo(layer);
+        ? `<svg viewBox="0 0 26 26" width="26" height="26" style="position:absolute;left:0;top:0;transform:rotate(${rot}deg)"><path d="M13 2 L21 23 L13 18 L5 23 Z" fill="#0a7d6e" stroke="#fff" stroke-width="2"/></svg>`
+        : `<svg viewBox="0 0 26 26" width="26" height="26" style="position:absolute;left:0;top:0"><circle cx="13" cy="13" r="7" fill="#0a7d6e" stroke="#fff" stroke-width="2.5"/></svg>`;
+      const label = `<span class="livelbl" style="position:absolute;left:${13 + lab.dx}px;top:${13 + lab.dy}px;width:${lab.w}px;box-sizing:border-box;text-align:center">${esc(name)}</span>`;
+      // Boat icon in the normal marker pane; its name (and arrow) in a pane above, so no boat can cover a name
+      const pop = `<b>${esc(name)}</b><br>${d.sog != null ? d.sog.toFixed(1) + ' kn' : 'speed —'}${rot != null ? ' · ' + Math.round(rot) + '°' : ''}<br><small>Updated ${ago(now - t)} · ±${Math.round(d.acc || 0)} m</small><br><button type="button" class="gbtn livepop-msg" data-msg-uid="${esc(uid)}" data-msg-name="${esc(name)}">Message</button>`;
+      L.marker([d.lat, d.lng], {icon: L.divIcon({className:'', iconSize:[26,26], iconAnchor:[13,13], html: svg}), keyboard:false}).bindPopup(pop).addTo(layer);
+      L.marker([d.lat, d.lng], {pane:'livelabels', icon: L.divIcon({className:'', iconSize:[26,26], iconAnchor:[13,13], html: (lab.arrow ? arrowSvg(lab) : '') + label}), keyboard:false}).bindPopup(pop).addTo(layer);
     }
+    const n = boats.length;
     if (user) setStatus(n ? 'ok' : 'wait', n ? n + ' live' : 'none now');
   }
+  map.on('zoomend', () => { if (map.hasLayer(layer)) draw(); });
   setInterval(draw, 30e3);   // age out boats that stopped sharing without signing off
 
   function listen(){
@@ -2448,8 +2507,8 @@ const SYNC_KEYS = ['ais-cloud','cal-station','cal-wx','sos-name','sos-call','sos
       if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') who.textContent = 'Sign-in failed: ' + (e.message || e.code);
     }
   });
-  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
-  auth.getRedirectResult().catch(e => { who.textContent = 'Sign-in failed: ' + (e.message || e.code); });   // show errors from an earlier redirect
+  try { auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {}); } catch(e){}
+  try { auth.getRedirectResult().catch(e => { who.textContent = 'Sign-in failed: ' + (e.message || e.code); }); } catch(e){}   // show errors from an earlier redirect
   obtn.addEventListener('click', async () => { try { await live.beforeSignOut(); } catch(e){} auth.signOut(); });   // remove your live position while still signed in
   auth.onAuthStateChanged(async user => {
     live.onUser(user);
