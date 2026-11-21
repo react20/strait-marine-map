@@ -581,7 +581,7 @@ Object.keys(bases).forEach((k,i) => {
 // ---------- Overlay registry with status ----------
 const ovl = document.getElementById('overlays');
 // Only wind speed and wind arrows start switched on; everything else is one tick away
-const DEFAULT_ON = new Set(['wind', 'arrow']);
+const DEFAULT_ON = new Set(['wind', 'arrow', 'live']);
 function addOverlay(id, title, sub, layer, on=true){
   on = DEFAULT_ON.has(id);
   const row = document.createElement('label'); row.className='lyr';
@@ -2211,7 +2211,7 @@ function setupLive(db){
     unsub = db.collection('live').where('t', '>', since).onSnapshot(snap => {
       snap.docChanges().forEach(c => c.type === 'removed' ? others.delete(c.doc.id) : others.set(c.doc.id, c.doc.data()));
       draw(); try { if (peer === ALL && !chat.hidden) updateRad(); else renderChat(); } catch(e){}
-    }, () => setStatus('bad', 'failed'));
+    }, e => { setStatus('bad', e && e.code === 'permission-denied' ? 'blocked by rules' : 'failed'); console.warn('live listen', e); });
   }
 
   function send(p){
@@ -2231,7 +2231,7 @@ function setupLive(db){
         acc: Math.round(p.coords.accuracy || 0), sog: sog != null ? +sog.toFixed(1) : null, cog: cog != null ? Math.round(cog) : null,
         t: firebase.firestore.FieldValue.serverTimestamp()})
       .then(() => { st.textContent = 'On · sharing as "' + myName() + '" · sent ' + fmt(new Date(), {hour:'numeric', minute:'2-digit'}); })
-      .catch(e => { st.textContent = 'On · could not send (' + (e.code || 'offline') + ')'; });
+      .catch(e => { st.textContent = e.code === 'permission-denied' ? 'On · blocked: publish the new Firestore rules' : 'On · could not send (' + (e.code || 'offline') + ')'; });
   }
 
   function start(){
