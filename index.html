@@ -2437,9 +2437,19 @@ const SYNC_KEYS = ['ais-cloud','cal-station','cal-wx','sos-name','sos-call','sos
   document.addEventListener('change', e => { if (SYNC_KEYS.includes(e.target.id) || e.target.id === 'sos-what') scheduleSave(); });
   sbtn.addEventListener('click', async () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    try { if (/Android|iPhone|iPad/.test(navigator.userAgent)) await auth.signInWithRedirect(provider); else await auth.signInWithPopup(provider); }
-    catch(e){ who.textContent = 'Sign-in failed: ' + (e.message || e.code); }
+    // Popup first on every device: on iPhone/iPad (Safari and Chrome both use WebKit) the redirect
+    // sign-in loses its result, because the sign-in page lives on firebaseapp.com, a different site
+    // from this map, and WebKit blocks that cross-site storage. Fall back to redirect only if the popup can't open.
+    try { await auth.signInWithPopup(provider); }
+    catch(e){
+      if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'].includes(e.code)){
+        try { await auth.signInWithRedirect(provider); return; } catch(e2){ e = e2; }
+      }
+      if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') who.textContent = 'Sign-in failed: ' + (e.message || e.code);
+    }
   });
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+  auth.getRedirectResult().catch(e => { who.textContent = 'Sign-in failed: ' + (e.message || e.code); });   // show errors from an earlier redirect
   obtn.addEventListener('click', async () => { try { await live.beforeSignOut(); } catch(e){} auth.signOut(); });   // remove your live position while still signed in
   auth.onAuthStateChanged(async user => {
     live.onUser(user);
