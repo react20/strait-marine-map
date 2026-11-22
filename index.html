@@ -350,6 +350,10 @@ aside .cal-lab .lab,aside .cal-lab .tt{font-size:7.5px}
 .cal-lab .b4.lab span:last-child{height:19px !important}
 .camsnaps{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;margin:6px 0}.camsnaps img{width:100%;height:auto;display:block;border-radius:3px;background:#0002;min-height:60px}
 a.tel{font-weight:600;white-space:nowrap}
+.topbtn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;background:none;border:0;padding:0;color:inherit;text-align:left;cursor:pointer}
+.topbtn h1{margin:0}.topchev{font-size:14px;color:var(--muted);transition:transform .15s}
+.topbtn[aria-expanded="false"] .topchev{transform:rotate(-90deg)}
+#topbox{margin-top:6px}
 .area-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:-4px 0 8px;font-size:12px}
 .fuelico{display:flex;align-items:center;justify-content:center;background:#c25e00;color:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .camico{display:flex;align-items:center;justify-content:center;background:#0b3954;color:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -413,10 +417,12 @@ a{color:var(--pin)}
       <p class="note" style="margin-top:6px">Check the Coast Guard's Radio Aids to Marine Navigation before relying on these.</p></div><div class="wxdays" id="wxdays" hidden></div><button type="button" class="locbtn" id="locbtn" aria-pressed="false">My location</button><div class="readout" id="readout">Tap the water for wind and waves at that spot</div></div>
   <aside>
     <div>
-      <div class="acct" id="acct" hidden><button type="button" class="gbtn" id="gsign">Sign in with Google</button><span class="acct-who" id="acct-who"></span><button type="button" class="linkbtn" id="gout" hidden>Sign out</button><div class="live-row" id="live-row" hidden><label class="live-tog"><input type="checkbox" id="live-on"> Share my live location</label><input type="text" id="live-boat" maxlength="40" placeholder="Boat name (optional)"><button type="button" class="gbtn" id="msg-open">Messages<span class="msg-badge" id="msg-badge" hidden></span></button><span class="acct-who" id="live-st">Off · other signed-in users can't see you</span></div></div>
-      <h1>Strait of Georgia Marine Map</h1>
+      <button type="button" class="topbtn" id="topbtn" aria-expanded="true" aria-controls="topbox" title="Show or hide sign-in and map area"><h1>Strait of Georgia Marine Map</h1><span class="topchev" aria-hidden="true">▾</span></button>
+      <div id="topbox">
       <p class="sub" id="area-sub">Sand Heads to Gambier Island · Baynes Sound to Reed Point</p>
       <div class="area-row"><span class="note">Map area:</span> <button type="button" class="linkbtn" id="area-set" title="Set your own map boundary (saved to your Google account when signed in)">Change map area</button> <button type="button" class="linkbtn" id="area-reset" hidden>Reset to Strait of Georgia</button><input type="hidden" id="map-area"></div>
+      <div class="acct" id="acct" hidden><button type="button" class="gbtn" id="gsign">Sign in with Google</button><span class="acct-who" id="acct-who"></span><button type="button" class="linkbtn" id="gout" hidden>Sign out</button><div class="live-row" id="live-row" hidden><label class="live-tog"><input type="checkbox" id="live-on"> Share my live location</label><input type="text" id="live-boat" maxlength="40" placeholder="Boat name (optional)"><button type="button" class="gbtn" id="msg-open">Messages<span class="msg-badge" id="msg-badge" hidden></span></button><span class="acct-who" id="live-st">Off · other signed-in users can't see you</span></div></div>
+      </div>
     </div>
 
     <section hidden>   <!-- base map is picked with the chip on the map -->
@@ -551,6 +557,13 @@ map.setMinZoom(map.getBoundsZoom(AREA.pad(0.08)));
 const HOME = [49.205, -123.245];
 map.setView(HOME, 11);
 window.addEventListener('load', () => map.invalidateSize());
+// Fold the top of the side panel (sign-in, map area) down to just the title; remembered on this device
+(() => {
+  const b = document.getElementById('topbtn'), box = document.getElementById('topbox');
+  const set = open => { b.setAttribute('aria-expanded', open); box.hidden = !open; };
+  try { if (localStorage.getItem('top-shut') === '1') set(false); } catch(e){}
+  b.addEventListener('click', () => { const open = b.getAttribute('aria-expanded') !== 'true'; set(open); try { localStorage.setItem('top-shut', open ? '' : '1'); } catch(e){} });
+})();
 // Change the map area live: bounds, zoom limit, and the land/edge cut on the weather layers
 function applyArea(b, fit){
   AREA = b;
