@@ -348,6 +348,7 @@ aside .cal-lab .lab,aside .cal-lab .tt{font-size:7.5px}
 .fcspot,.fcmodel{font:600 11px var(--sans);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:2px;max-width:100%}
 .cal-lab .b4.lab span:last-child{height:19px !important}
 .camsnaps{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;margin:6px 0}.camsnaps img{width:100%;height:auto;display:block;border-radius:3px;background:#0002;min-height:60px}
+.fuelico{display:flex;align-items:center;justify-content:center;background:#c25e00;color:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .camico{display:flex;align-items:center;justify-content:center;background:#0b3954;color:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .cal-tide{font-size:13px;color:var(--muted);padding:6px 4px;white-space:nowrap}
 .cal-bar #cal-wx{margin-left:auto}
@@ -1065,6 +1066,48 @@ for (const c of WATER_CAMS){
       (c.note ? `<br><span class="note">${c.note}</span>` : ''), {maxWidth: 340, minWidth: 260})
     .addTo(camLayer);
 }
+
+// ---------- Marine fuel docks (from OpenStreetMap, looked up live when the layer is turned on) ----------
+const fuelLayer = L.layerGroup();
+const setFuelStatus = addOverlay('fuel', 'Marine fuel docks', 'Fuel docks and marinas selling fuel · OpenStreetMap', fuelLayer, false);
+const fuelIcon = L.divIcon({className:'fuelico', html:'<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M5 3h8a1 1 0 0 1 1 1v7h1a2 2 0 0 1 2 2v4a1 1 0 0 0 2 0V9.4l-2.7-2.7 1.4-1.4 3 3A1 1 0 0 1 21 9v8a3 3 0 0 1-6 0v-4h-1v7H4V4a1 1 0 0 1 1-1zm1 2v5h6V5H6z"/></svg>', iconSize:[26,26], iconAnchor:[13,13]});
+let fuelLoaded = false;
+async function loadFuel(){
+  if (fuelLoaded) return;
+  const b = '49.0,-124.95,49.62,-122.8';
+  const q = `[out:json][timeout:25];(nwr["waterway"="fuel"](${b});nwr["amenity"="fuel"]["boat"="yes"](${b});nwr["amenity"="fuel"]["motorboat"="yes"](${b});nwr["seamark:small_craft_facility:category"~"fuel"](${b}););out center tags;`;
+  setFuelStatus('wait', 'loading');
+  let data = null;
+  try { const c = JSON.parse(localStorage.getItem('fuel-cache') || 'null'); if (c && Date.now() - c.at < 7*864e5) data = c.data; } catch(e){}
+  if (!data){
+    for (const host of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']){
+      try { const r = await fetch(host, {method:'POST', body:'data=' + encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'}}); if (r.ok){ data = (await r.json()).elements; break; } } catch(e){}
+    }
+    if (data) try { localStorage.setItem('fuel-cache', JSON.stringify({at: Date.now(), data})); } catch(e){}
+  }
+  if (!data){ setFuelStatus('bad', 'failed'); return; }
+  fuelLoaded = true; fuelLayer.clearLayers();
+  const seen = new Set();
+  for (const el of data){
+    const lat = el.lat ?? el.center?.lat, lon = el.lon ?? el.center?.lon, t = el.tags || {};
+    if (lat == null) continue;
+    const key = lat.toFixed(3) + ',' + lon.toFixed(3); if (seen.has(key)) continue; seen.add(key);
+    const name = t.name || t.brand || t.operator || 'Fuel dock';
+    const fuels = [['fuel:diesel','Diesel'],['fuel:octane_87','Gas 87'],['fuel:octane_89','Gas 89'],['fuel:octane_91','Gas 91'],['fuel:octane_94','Gas 94'],['fuel:marine_diesel','Marine diesel']].filter(([k]) => t[k] === 'yes').map(([, v]) => v);
+    const web = t.website || t['contact:website'], phone = t.phone || t['contact:phone'];
+    L.marker([lat, lon], {icon:fuelIcon, title:name})
+      .bindPopup(`<b>${esc2(name)}</b>` + (t.brand && t.brand !== name ? `<br><span class="note">${esc2(t.brand)}</span>` : '') +
+        (fuels.length ? `<br>${fuels.join(' · ')}` : '') +
+        (t.opening_hours ? `<br><span class="note">Hours: ${esc2(t.opening_hours)}</span>` : '') +
+        (phone ? `<br>📞 <span class="sel">${esc2(phone)}</span>` : '') +
+        (t['seamark:radio_station:channel'] || t['vhf'] ? `<br>VHF ${esc2(t['seamark:radio_station:channel'] || t['vhf'])}` : '') +
+        (web ? `<br><a href="${esc2(web)}" target="_blank" rel="noopener">Website ↗</a>` : '') +
+        `<br><span class="note">Call ahead: hours and fuel change by season. From OpenStreetMap.</span>`)
+      .addTo(fuelLayer);
+  }
+  setFuelStatus(seen.size ? 'ok' : 'warn', seen.size + ' docks');
+}
+map.on('overlayadd layeradd', e => { if (e.layer === fuelLayer) loadFuel(); });
 
 // ---------- Live ships (AIS) ----------
 const dm = (v, pos, neg) => { const a = Math.abs(v), d = Math.floor(a); return `${d}° ${((a - d) * 60).toFixed(3)}′ ${v >= 0 ? pos : neg}`; };
