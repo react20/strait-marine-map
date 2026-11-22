@@ -1045,7 +1045,7 @@ const WATER_CAMS = [
   {name:'Nanaimo Harbour', area:'Port Theatre rooftop, looking over the harbour', lat:49.1665, lon:-123.9355, src:'CHEK News', url:'https://www.cheknews.ca/chek-harbour-cams-24-7-livestreams-from-victoria-and-nanaimo/', note:'CHEK has said this camera is sometimes down for building work.'}
 ];
 const camLayer = L.layerGroup();
-addOverlay('cams', 'Water cameras', 'Public webcams looking at the water · tap one to open its live view', camLayer, false);
+addOverlay('cams', 'Water cameras', 'Public webcams looking at the water · tap one to open its live view', camLayer, false)('ok', WATER_CAMS.length + ' cams');
 const camIcon = L.divIcon({className:'camico', html:'<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zm8 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>', iconSize:[26,26], iconAnchor:[13,13]});
 for (const c of WATER_CAMS){
   L.marker([c.lat, c.lon], {icon:camIcon, title:c.name, keyboard:true})
