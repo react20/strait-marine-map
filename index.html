@@ -2229,7 +2229,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.get
 // ---------- 7-day weather forecast on the map (Environment Canada city forecasts) ----------
 const WX_TOWNS = /^(Nanaimo|Gibsons|Sechelt|Qualicum Beach|West Vancouver|Richmond|Vancouver)$/;
 const wxLayer = L.layerGroup();
-const setWxStatus = addOverlay('wx7', 'Weather forecast · 7 days', 'Environment Canada town forecasts: temperature and chance of rain. Pick the day with the buttons on the map; tap a town for details', wxLayer, true);
+const setWxStatus = addOverlay('wx7', 'Weather forecast · 7 days', 'Town forecasts and the forecast bar on the map (days, 6-hour blocks, play). Tap a town for details', wxLayer, true);
 let wxData = [], wxDay = null;
 function wxPeriods(props){
   // Group the forecast periods into days: {day:'Wednesday', d:{...}, n:{...}}
@@ -2319,7 +2319,8 @@ function drawWx(){
   wxLayer.clearLayers();
   const bar = document.getElementById('wxdays');
   // The day / 6-hour picker drives weather, wind and waves, so show it when any of them is on
-  bar.hidden = !wxData.length || ![wxLayer, wx.wind?.layer, wx.wave?.layer, arrowLayer].some(l => l && map.hasLayer(l));
+  // The forecast chip (day picker) belongs to the Weather forecast layer: tick that layer to show it
+  bar.hidden = !wxData.length || !map.hasLayer(wxLayer);
   if (bar.hidden) return;
   const dayNames = wxData[0].days.map(x => x.day);
   if (!dayNames.includes(wxDay)) wxDay = dayNames[0];
