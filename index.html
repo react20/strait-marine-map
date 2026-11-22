@@ -515,7 +515,7 @@ const CONFIG = {
   // Live ships from the AIS helper program running on this computer (run-ais-helper.bat)
   aisFeed: 'http://127.0.0.1:8765/vessels',
   // Cloud relay (works on phones). Set once via the map link ?ais=<address> or here.
-  aisCloud: '',
+  aisCloud: 'https://strait-ais.invest-tc20.workers.dev',
   // Coast Guard / DFO ships: names starting CCGS, or MMSI numbers you add here
   govNames: /^(CCGS|C\.C\.G\.S|CCG\b|CG\s|DFO\b|CANADIAN COAST GUARD)/i,
   govMmsi: []
@@ -1033,7 +1033,7 @@ loadTides();
 const dm = (v, pos, neg) => { const a = Math.abs(v), d = Math.floor(a); return `${d}° ${((a - d) * 60).toFixed(3)}′ ${v >= 0 ? pos : neg}`; };
 const govLayer = L.layerGroup(), otherLayer = L.layerGroup();
 const IS_PHONE_UA = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-const setGovStatus = addOverlay('gov', 'Coast Guard & DFO ships', IS_PHONE_UA ? 'Live AIS · works on the computer running the AIS helper, not on phones yet' : 'Live AIS · needs the AIS helper running', govLayer);
+const setGovStatus = addOverlay('gov', 'Coast Guard & DFO ships', 'Live AIS via the cloud relay · works on any phone or computer', govLayer);
 const setOtherStatus = addOverlay('ships', 'Other ships', 'Live AIS, all other vessels', otherLayer, false);
 const isGov = v => CONFIG.govNames.test(v.name || '') || CONFIG.govMmsi.includes(String(v.mmsi));
 function boatIcon(v, gov){
@@ -1052,10 +1052,9 @@ const IS_PHONE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 } catch(e){} })();
 const aisCloud = () => { let u = ''; try { u = localStorage.getItem('ais-cloud') || ''; } catch(e){} u = u || CONFIG.aisCloud; return u ? u.replace(/\/(vessels)?$/, '') + '/vessels' : ''; };
 async function aisData(){
-  // On a computer, try the local helper first; otherwise (and on phones) use the cloud relay
-  if (!IS_PHONE){ try { return await (await fetch(CONFIG.aisFeed, {cache:'no-store'})).json(); } catch(e){ if (!aisCloud()) throw e; } }
-  if (!aisCloud()) throw new Error('none');
-  return await (await fetch(aisCloud(), {cache:'no-store'})).json();
+  // The cloud relay serves everyone; the computer helper is only a fallback if the relay is down
+  if (aisCloud()){ try { return await (await fetch(aisCloud(), {cache:'no-store'})).json(); } catch(e){ if (IS_PHONE) throw e; } }
+  return await (await fetch(CONFIG.aisFeed, {cache:'no-store'})).json();
 }
 async function loadShips(){
   if (!map.hasLayer(govLayer) && !map.hasLayer(otherLayer)) return;
