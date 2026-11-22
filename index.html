@@ -2562,7 +2562,7 @@ function setupLive(db){
     if (!navigator.geolocation){ tog.checked = false; st.textContent = 'This browser has no GPS access'; return; }
     st.textContent = 'On · finding your position…'; lastSent = null; prev = null;
     watchId = navigator.geolocation.watchPosition(send, e => {
-      st.textContent = e.code === 1 ? 'Location permission was denied' : 'Waiting for GPS…';
+      st.textContent = e.code === 1 ? (typeof locWhy === 'function' ? 'Can\'t share: ' + locWhy(e) : 'Location permission was denied') : 'Waiting for GPS…';
       if (e.code === 1){ tog.checked = false; stop(); }
     }, {enableHighAccuracy:true, maximumAge:5000, timeout:60000});
     // Heartbeat: re-send the last fix every 2 min even when sitting still
