@@ -339,7 +339,13 @@ aside .cal-lab .lab,aside .cal-lab .tt{font-size:7.5px}
 .cal-c .bk .wd{flex-direction:column;align-items:center;height:19px !important;gap:0}
 .cal-c .bk .wd .n{display:block !important;font-size:7.5px;line-height:8px;letter-spacing:-.02em}
 .cal-c .bk .wd .dir{line-height:10px}
-.cal-c .b4{height:42px !important}
+.cal-c .b4{height:51px !important}
+.cal-c .bk .wg{display:block;height:9px;font:600 7.5px/9px var(--mono, monospace);text-align:center;opacity:.85}
+.cal-c .bk .wg.c{color:#3bb273}.cal-c .bk .wg.w{color:#f0a030}.cal-c .bk .wg.x{color:#e04848}
+.cal-lab .b4.lab span:nth-child(3){height:19px !important;margin-top:1px}.cal-lab .b4.lab span:nth-child(4){height:9px !important;margin-top:0}
+.cal-fc{display:inline-flex;gap:4px;flex-wrap:wrap;margin-left:6px}
+.wxctl .fcspot,.wxctl .fcmodel{width:96px;font-size:10px}
+.fcspot,.fcmodel{font:600 11px var(--sans);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:2px;max-width:100%}
 .cal-lab .b4.lab span:last-child{height:19px !important}
 .camsnaps{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;margin:6px 0}.camsnaps img{width:100%;height:auto;display:block;border-radius:3px;background:#0002;min-height:60px}
 .camico{display:flex;align-items:center;justify-content:center;background:#0b3954;color:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -388,7 +394,7 @@ a{color:var(--pin)}
 </head>
 <body>
 <div class="app">
-  <div class="mapwrap"><div id="map"></div><button type="button" class="panebtn" id="panebtn" aria-label="Hide side panel" title="Hide side panel">›</button><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar"><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button></div><div class="cal" id="cal" hidden role="dialog" aria-modal="true" aria-labelledby="cal-title"><div class="cal-card"><div class="cal-top"><h2 id="cal-title">Tide, moon &amp; weather forecast</h2><button type="button" class="sos-x" id="cal-close">Close</button></div><div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-month"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><button type="button" class="linkbtn cal-pasttog" id="cal-pasttog" hidden></button><select id="cal-station" class="dlsel" aria-label="Tide station" hidden></select><select id="cal-wx" class="dlsel" aria-label="Weather for"></select><span class="cal-tide" id="cal-tide"></span></div><div class="cal-grid hidepast" id="cal-grid"></div><div class="cal-day" id="cal-day"></div><div class="cal-ins" id="cal-ins"></div><p class="note">Tide heights in metres above chart datum (lowest normal tide), from the Canadian Hydrographic Service. ▲ high (blue) and ▼ low tide, with time (24-hour) and height in metres. Moon phases are calculated and accurate to within about half a day. Each day's small chart is the tide from midnight to midnight (same scale all month). Its colour shows how fast the tide is changing, a guide to current strength: <b style="color:#e03131">red</b> strong (over 0.6 m/h), <b style="color:#f08c00">orange</b> moderate, <b style="color:#2f9e44">green</b> weak, near slack water. Each day is split into four 6-hour blocks (00–06, 06–12, 12–18, 18–24): each block shows the wind (arrow and knots: green under 10, orange 10–20, red over 20), then the temperature and weather icon, and under the tide curve the estimated wave height in metres (green under 0.5, orange 0.5–1, red over 1), for the next 14 days. Days 1–7 use Environment Canada's town forecast; days 8–10 the global model (GDPS); days 11–14 the ensemble average (GEPS), which gives wind speed without direction, so those days have no arrow or wave estimate. Past blocks are shown greyed out with what was actually measured at the nearest weather station (Point Atkinson or Entrance Island): temperature, wind, rain icon when rain fell, and waves estimated from that wind. Wind and waves are for open water just off the chosen tide station. Waves are estimated from the forecast wind and how far it blows over open water; no ocean swell reaches the inner Strait. Hover a block for details. Actual currents in passes can differ, so check CHS current tables for Gabriola Passage and other narrows. Hover a block to see where its numbers came from.</p></div></div><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="vhfbtn" id="vhfbtn" aria-expanded="false" aria-controls="vhfpop">VHF</button><div class="vhfpop" id="vhfpop" hidden><div class="vhfpop-top"><b>VHF channels</b><button type="button" class="linkbtn" id="vhfclose">Close</button></div><div class="rows vhf">
+  <div class="mapwrap"><div id="map"></div><button type="button" class="panebtn" id="panebtn" aria-label="Hide side panel" title="Hide side panel">›</button><div class="legendbox" id="legends"><div id="leg-wind" hidden><b>Wind</b><img id="leg-wind-img" alt="Wind speed colours in knots"></div><div id="leg-depth" hidden><b>Depth · metres</b><img id="leg-depth-img" alt="Depth colours: red shallow to blue deep"></div></div><div class="navbar" id="navbar"><div class="nb-main"><span class="nb-arrow" id="nb-arrow" aria-hidden="true">▲</span><span class="nb-big" id="nb-cog">—</span><span class="nb-dir" id="nb-dir"></span></div><div class="nb-cell"><span class="nb-k">Speed</span><span><b id="nb-sog">—</b> kn</span></div><div class="nb-pos" id="nb-pos"></div><div class="nb-trip" id="nb-trip" hidden></div><button type="button" class="sosbtn" id="sosbtn">Emergency</button></div><div class="cal" id="cal" hidden role="dialog" aria-modal="true" aria-labelledby="cal-title"><div class="cal-card"><div class="cal-top"><h2 id="cal-title">Tide, moon &amp; weather forecast</h2><button type="button" class="sos-x" id="cal-close">Close</button></div><div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-month"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><button type="button" class="linkbtn cal-pasttog" id="cal-pasttog" hidden></button><select id="cal-station" class="dlsel" aria-label="Tide station" hidden></select><select id="cal-wx" class="dlsel" aria-label="Weather for"></select><span id="cal-fc" class="cal-fc"></span><span class="cal-tide" id="cal-tide"></span></div><div class="cal-grid hidepast" id="cal-grid"></div><div class="cal-day" id="cal-day"></div><div class="cal-ins" id="cal-ins"></div><p class="note">Tide heights in metres above chart datum (lowest normal tide), from the Canadian Hydrographic Service. ▲ high (blue) and ▼ low tide, with time (24-hour) and height in metres. Moon phases are calculated and accurate to within about half a day. Each day's small chart is the tide from midnight to midnight (same scale all month). Its colour shows how fast the tide is changing, a guide to current strength: <b style="color:#e03131">red</b> strong (over 0.6 m/h), <b style="color:#f08c00">orange</b> moderate, <b style="color:#2f9e44">green</b> weak, near slack water. Each day is split into four 6-hour blocks (00–06, 06–12, 12–18, 18–24): each block shows the wind (arrow and knots: green under 10, orange 10–20, red over 20), then the temperature and weather icon, and under the tide curve the estimated wave height in metres (green under 0.5, orange 0.5–1, red over 1), for the next 14 days. Days 1–7 use Environment Canada's town forecast; days 8–10 the global model (GDPS); days 11–14 the ensemble average (GEPS), which gives wind speed without direction, so those days have no arrow or wave estimate. Past blocks are shown greyed out with what was actually measured at the nearest weather station (Point Atkinson or Entrance Island): temperature, wind, rain icon when rain fell, and waves estimated from that wind. Wind and waves are for open water just off the chosen tide station. Waves are estimated from the forecast wind and how far it blows over open water; no ocean swell reaches the inner Strait. Hover a block for details. Actual currents in passes can differ, so check CHS current tables for Gabriola Passage and other narrows. Hover a block to see where its numbers came from.</p></div></div><div class="sos" id="sos" hidden role="dialog" aria-modal="true" aria-labelledby="sos-title"><div class="sos-card"><div class="sos-top"><h2 id="sos-title">Emergency</h2><button type="button" class="sos-x" id="sos-close" aria-label="Close">Close</button></div><div class="sos-pos"><span class="k">Your position</span><div id="sos-coord" class="big">Getting GPS position…</div><div id="sos-near" class="near"></div><div id="sos-acc" class="near"></div></div><div class="sos-calls"><a class="call" id="call16" href="tel:%2A16">Call *16<small>Coast Guard</small></a><a class="call" href="tel:911">Call 911<small>works on any phone</small></a><div class="call vhf">VHF Ch 16<small>radio · press and hold to talk</small></div></div><div class="sos-pref"><a class="call pref" id="call-pref" href="#">Call contact<small id="pref-sub">set it up below</small></a><a class="call pref" id="text-pref" href="#">Text my position<small>to your contact</small></a><a class="call pref plan" id="text-plan" href="#">Send trip plan<small id="plan-sub">destination and return time</small></a></div><details class="sos-set"><summary>Your boat details (filled into the script, saved on this device)</summary><label>Vessel name<input id="sos-name" placeholder="e.g. Sea Breeze"></label><label>Call sign (optional)<input id="sos-call" placeholder="e.g. CFA1234"></label><label>People on board<input id="sos-pob" inputmode="numeric" placeholder="e.g. 4"></label><label>Description of boat<input id="sos-desc" placeholder="e.g. white 28 ft cabin cruiser, blue canopy"></label><label>Destination<input id="sos-dest" list="dest-list" placeholder="e.g. Thrasher Rock"><datalist id="dest-list"></datalist></label><label>Estimated return time<input id="sos-eta" type="datetime-local"></label><label>Preferred contact name<input id="sos-cname" placeholder="e.g. Marina office, or a family member"></label><label>Their phone number<input id="sos-cphone" type="tel" inputmode="tel" placeholder="e.g. 604 555 0123"></label></details><div class="sos-tabs"><div class="tabs big"><button type="button" id="t-may" aria-pressed="true">MAYDAY · life in danger</button><button type="button" id="t-pan" aria-pressed="false">PAN-PAN · urgent, not life-threatening</button></div></div><label class="sos-what">What is happening<select id="sos-what"></select></label><input id="sos-other" class="sos-other" placeholder="Describe what is happening" hidden><div class="sos-script"><p class="sos-when" id="sos-when"></p><ol id="sos-lines"></ol><p class="note">Speak slowly and clearly. On VHF, release the button after OVER and listen. Repeat every few minutes if no answer.</p></div></div></div><button type="button" class="vhfbtn" id="vhfbtn" aria-expanded="false" aria-controls="vhfpop">VHF</button><div class="vhfpop" id="vhfpop" hidden><div class="vhfpop-top"><b>VHF channels</b><button type="button" class="linkbtn" id="vhfclose">Close</button></div><div class="rows vhf">
         <div class="vr em"><b>16</b><span>Distress, safety and calling · <i>*16</i> on a cell phone</span></div>
         <div class="vr"><b>83A</b><span>Coast Guard working channel</span></div>
         <div class="vr"><b>12</b><span>Vessel Traffic: Vancouver Harbour, English Bay, Howe Sound</span></div>
@@ -1700,8 +1706,76 @@ function blockStart(key, b){ return localMidnight(new Date(Date.UTC(+key.slice(0
 function blocksHTML(key, wxd){
   const now = Date.now();
   return `<span class="b4">${[0,1,2,3].map(b => { const past = blockStart(key, b) + 6*3600e3 <= now; const w = past ? null : blockWeather(key, b, wxd);
-    return `<span class="bk${past ? ' past' : ''}" data-key="${key}" data-b="${b}"${!past && !w ? ' data-nowx="1"' : ''} title="${BLOCK_NAMES[b]}${w ? ': ' + esc2(w.text) : ''}">${w?.icon ? `<img src="${w.icon}" alt="">` : '<i class="noic"></i>'}<span class="wi">${w?.temp != null ? `<b>${w.temp}°</b>` : ''}</span><span class="wd"></span></span>`; }).join('')}</span>`;
+    return `<span class="bk${past ? ' past' : ''}" data-key="${key}" data-b="${b}"${!past && !w ? ' data-nowx="1"' : ''} title="${BLOCK_NAMES[b]}${w ? ': ' + esc2(w.text) : ''}">${w?.icon ? `<img src="${w.icon}" alt="">` : '<i class="noic"></i>'}<span class="wi">${w?.temp != null ? `<b>${w.temp}°</b>` : ''}</span><span class="wd"></span><span class="wg"></span></span>`; }).join('')}</span>`;
 }
+// ---------- Forecast spot and wind model for the calendar / day picker ----------
+// Spots are open water. "auto" = just off the tide station that matches the weather town.
+const FC_SPOTS = [
+  {id:'auto', name:'Near the tide station'},
+  {id:'patk', name:'Point Atkinson', lat:49.31, lon:-123.30},
+  {id:'ebay', name:'English Bay', lat:49.285, lon:-123.20},
+  {id:'bowen', name:'Queen Charlotte Channel (Bowen)', lat:49.365, lon:-123.32},
+  {id:'gibsons', name:'Gibsons / Shoal Channel', lat:49.385, lon:-123.48},
+  {id:'sandheads', name:'Sand Heads', lat:49.11, lon:-123.32},
+  {id:'thrasher', name:'Thrasher Rock', lat:49.15, lon:-123.64},
+  {id:'halibut', name:'Halibut Bank', lat:49.34, lon:-123.72},
+  {id:'entrance', name:'Entrance Island (Nanaimo)', lat:49.21, lon:-123.80},
+  {id:'ballenas', name:'Ballenas Islands', lat:49.35, lon:-124.16},
+  {id:'qualicum', name:'Off Qualicum Beach', lat:49.37, lon:-124.42}
+];
+const FC_MODELS = [
+  {id:'ec', name:'Environment Canada', om:'gem_seamless', note:'Environment Canada GEM (2.5 km HRDPS first 2 days)'},
+  {id:'ecmwf', name:'ECMWF (as Windy)', om:'ecmwf_ifs', alt:'ecmwf_ifs025', note:'European ECMWF IFS, the model Windy shows by default'},
+  {id:'gfs', name:'GFS (USA)', om:'gfs_seamless', note:'US NOAA GFS'}
+];
+const lsGet = (k, d) => { try { return localStorage.getItem(k) || d; } catch(e){ return d; } };
+let fcSpotId = lsGet('fc-spot', 'auto'), fcModelId = lsGet('fc-model', 'ec');
+function fcLoc(code){
+  const sp = FC_SPOTS.find(x => x.id === fcSpotId);
+  return sp && sp.lat ? sp : (CAL_POINTS[code] || CAL_POINTS['07795']);
+}
+const fcModel = () => FC_MODELS.find(m => m.id === fcModelId) || FC_MODELS[0];
+// Hourly wind, gusts and direction for one spot and model, from Open-Meteo (free, no key)
+const omCache = {};
+function omWind(loc, model){
+  const k = `${model.id}|${loc.lat},${loc.lon}`;
+  if (omCache[k] && Date.now() - omCache[k].at < 30*60e3) return omCache[k].p;
+  const get = async om => {
+    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn&timeformat=unixtime&forecast_days=16&past_days=1&models=${om}`)).json();
+    if (!j.hourly?.time) throw new Error(j.reason || 'no data');
+    return {t: j.hourly.time.map(x => x * 1000), kn: j.hourly.wind_speed_10m, dir: j.hourly.wind_direction_10m, gust: j.hourly.wind_gusts_10m};
+  };
+  const p = get(model.om).catch(e => model.alt ? get(model.alt) : Promise.reject(e));
+  omCache[k] = {at: Date.now(), p};
+  p.catch(() => { delete omCache[k]; });
+  return p;
+}
+// Average wind, prevailing direction and strongest gust over one 6-hour block
+function omBlock(d, t0){
+  let n = 0, sum = 0, x = 0, y = 0, g = null;
+  for (let i = 0; i < d.t.length; i++){
+    if (d.t[i] < t0 || d.t[i] >= t0 + 6*3600e3 || d.kn[i] == null) continue;
+    n++; sum += d.kn[i];
+    if (d.dir[i] != null){ x += d.kn[i] * Math.sin(d.dir[i] * Math.PI / 180); y += d.kn[i] * Math.cos(d.dir[i] * Math.PI / 180); }
+    if (d.gust[i] != null) g = Math.max(g ?? 0, d.gust[i]);
+  }
+  if (!n) return null;
+  return {kn: sum / n, dir: (x || y) ? (Math.atan2(x, y) * 180 / Math.PI + 360) % 360 : null, gust: g};
+}
+function setFc(spot, model){
+  if (spot != null){ fcSpotId = spot; try { localStorage.setItem('fc-spot', spot); } catch(e){} }
+  if (model != null){ fcModelId = model; try { localStorage.setItem('fc-model', model); } catch(e){} }
+  document.querySelectorAll('select.fcspot').forEach(el => el.value = fcSpotId);
+  document.querySelectorAll('select.fcmodel').forEach(el => el.value = fcModelId);
+  for (const k in windCache) delete windCache[k];
+  if (document.getElementById('calx')?.open) renderCal(); else renderWeek();
+}
+const fcSelects = () => `<select class="fcspot" aria-label="Forecast spot" title="Where the wind and wave forecast is for">${FC_SPOTS.map(x => `<option value="${x.id}"${x.id === fcSpotId ? ' selected' : ''}>${x.name}</option>`).join('')}</select>` +
+  `<select class="fcmodel" aria-label="Wind model" title="Which forecast model the wind comes from">${FC_MODELS.map(x => `<option value="${x.id}"${x.id === fcModelId ? ' selected' : ''}>${x.name}</option>`).join('')}</select>`;
+document.addEventListener('change', e => {
+  if (e.target.matches?.('select.fcspot')) setFc(e.target.value, null);
+  else if (e.target.matches?.('select.fcmodel')) setFc(null, e.target.value);
+});
 // Open-water points used for the calendar's wind and wave estimates, just off each tide station
 const CAL_POINTS = {'07795': {lat:49.31, lon:-123.30}, '07917': {lat:49.205, lon:-123.80}};
 const MASK_BOX = {s:48.95, n:49.7, w:-125.05, e:-122.7};
@@ -1805,7 +1879,9 @@ function paintWind(root, key, b, w, loc, src){
   const cls = w.kn < 10 ? 'c' : w.kn < 20 ? 'w' : 'x';
   el.className = 'wd ' + cls + (w.dir == null ? ' so' : '');
   el.innerHTML = `<span class="n">${w.kn.toFixed(0)}</span>` + (w.dir != null ? `<span class="dir" style="transform:rotate(${(w.dir + 180) % 360}deg)">↑</span>` : '');
-  el.parentElement.title += ` · wind ${w.dir != null ? compass(w.dir) + ' ' : ''}${w.kn.toFixed(0)} kn${w.max ? ' (strongest hour ' + w.max.toFixed(0) + ' kn)' : ''}${src && !el.parentElement.title.includes(src) ? ' · ' + src : ''}`;
+  const gEl = el.parentElement.querySelector('.wg');
+  if (gEl){ gEl.textContent = w.gust != null ? w.gust.toFixed(0) : ''; gEl.className = 'wg ' + (w.gust == null ? '' : w.gust < 15 ? 'c' : w.gust < 25 ? 'w' : 'x'); }
+  el.parentElement.title += ` · wind ${w.dir != null ? compass(w.dir) + ' ' : ''}${w.kn.toFixed(0)} kn${w.gust != null ? ', gusts ' + w.gust.toFixed(0) + ' kn' : ''}${w.max ? ' (strongest hour ' + w.max.toFixed(0) + ' kn)' : ''}${src && !el.parentElement.title.includes(src) ? ' · ' + src : ''}`;
   if (w.dir == null) return;
   const hs = waveHeight(w.kn, fetchMetres(loc.lat, loc.lon, w.dir));
   const wv = root.querySelector(`.wv[data-key="${key}"][data-b="${b}"]`);
@@ -1821,7 +1897,8 @@ async function loadBlockWinds(root, keys, st, isStale){
       else if (t <= now + 14*864e5) jobs.push({key, b, t: Math.max(t, Math.ceil(now / 3600e3) * 3600e3)});
     }
   }
-  const code = calStation.value, loc = CAL_POINTS[code] || {lat: st.lat, lon: st.lon};
+  const code = calStation.value, loc = fcLoc(code), model = fcModel();
+  const om = await omWind(loc, model).catch(() => null);   // null → fall back to the Environment Canada map grids
   const stale = () => !root.isConnected || isStale();
   // Past: measured values, greyed out
   if (pastJobs.length){
@@ -1854,9 +1931,10 @@ async function loadBlockWinds(root, keys, st, isStale){
           bk.title = `${BLOCK_NAMES[j.b]}: ${w.text}`;
         }
       }
-      let w = windCache[ck] !== undefined ? windCache[ck] : (windCache[ck] = await windAt(loc, tt));
-      let src = '';
-      if (!w && modelFor(tt) === CONFIG.windModels[2]){
+      let w = null, src = '';
+      if (om){ const t0 = blockStart(j.key, j.b); w = omBlock(om, Math.max(t0, Math.floor(now / 3600e3) * 3600e3 - 3600e3)) || omBlock(om, t0); src = `${model.name} at ${loc.name || 'the tide station'}`; }
+      else w = windCache[ck] !== undefined ? windCache[ck] : (windCache[ck] = await windAt(loc, tt));
+      if (!w && !om && modelFor(tt) === CONFIG.windModels[2]){
         const ms = await pointValue(CONFIG.windModels[2].speed, snap3(tt).getTime(), loc);
         if (ms != null){ w = {kn: ms * 1.94384, dir: null}; src = 'ensemble average, speed only'; }
       }
@@ -1880,7 +1958,7 @@ function dayCellHTML(key, tides, mLo, mHi, wxd, phases, todayKey){
   return {html, range};
 }
 function labCellHTML(tides, mLo, mHi){
-  return tides ? `<div class="cal-c cal-lab" aria-hidden="true"><span class="top"></span><span class="tide-grp"><span class="b4 lab"><span>Sky</span><span>Temp °C</span><span>Wind kn</span></span><span class="wv4 lab">Waves m</span><span class="mini lab"><span>${mHi.toFixed(1)}</span><span>Tide m</span><span>${mLo.toFixed(1)}</span></span><span class="tt">Hi/Lo</span><span class="tt">time · m</span></span></div>` : '<div class="cal-c cal-lab"></div>';
+  return tides ? `<div class="cal-c cal-lab" aria-hidden="true"><span class="top"></span><span class="tide-grp"><span class="b4 lab"><span>Sky</span><span>Temp °C</span><span>Wind kn</span><span>Gust kn</span></span><span class="wv4 lab">Waves m</span><span class="mini lab"><span>${mHi.toFixed(1)}</span><span>Tide m</span><span>${mLo.toFixed(1)}</span></span><span class="tt">Hi/Lo</span><span class="tt">time · m</span></span></div>` : '<div class="cal-c cal-lab"></div>';
 }
 // Next 7 days in the side panel, with the same cells as the month calendar
 let wkToken = 0, wkKeys = [];
@@ -1916,6 +1994,7 @@ async function renderWeek(){
   if (tides) loadBlockWinds(grid, keys, tides.st, () => tok !== wkToken).then(() => { if (tok === wkToken) drawWx(); });
 }
 async function renderCal(){
+  const fcBox = document.getElementById('cal-fc'); if (fcBox && !fcBox.firstChild) fcBox.innerHTML = fcSelects();
   fillWxTowns();   // also picks the matching tide station
   const {y, m} = calState, grid = document.getElementById('cal-grid');
   const first = new Date(Date.UTC(y, m, 1, 20));
@@ -1932,7 +2011,7 @@ async function renderCal(){
   const ranges = [];
   // Row labels with units, at the far left of each week
   const labCell = () => labCellHTML(tides, mLo, mHi);
-  const _unusedLab = () => tides ? `<div class="cal-c cal-lab" aria-hidden="true"><span class="top"></span><span class="tide-grp"><span class="b4 lab"><span>Sky</span><span>Temp °C</span><span>Wind kn</span></span><span class="wv4 lab">Waves m</span><span class="mini lab"><span>${mHi.toFixed(1)}</span><span>Tide m</span><span>${mLo.toFixed(1)}</span></span><span class="tt">Hi/Lo</span><span class="tt">time · m</span></span></div>` : '<div class="cal-c cal-lab"></div>';
+  const _unusedLab = () => tides ? `<div class="cal-c cal-lab" aria-hidden="true"><span class="top"></span><span class="tide-grp"><span class="b4 lab"><span>Sky</span><span>Temp °C</span><span>Wind kn</span><span>Gust kn</span></span><span class="wv4 lab">Waves m</span><span class="mini lab"><span>${mHi.toFixed(1)}</span><span>Tide m</span><span>${mLo.toFixed(1)}</span></span><span class="tt">Hi/Lo</span><span class="tt">time · m</span></span></div>` : '<div class="cal-c cal-lab"></div>';
   let html = '<div class="cal-h"></div>' + WD.map(d => `<div class="cal-h">${d}</div>`).join('');
   let col = 0;
   const push = cell => { if (col % 7 === 0) html += labCell(); html += cell; col++; };
@@ -2179,7 +2258,7 @@ function drawWx(){
   const keepScroll = bar.scrollLeft;
   bar.innerHTML = `<div class="wxctl"><button type="button" class="play" aria-label="${wxPlay ? 'Pause' : 'Play'}" title="${wxPlay ? 'Pause' : 'Play through the forecast, 6 hours at a time'}">${wxPlay ? '❚❚' : '▶'}</button>` +
       `<select class="wkr" aria-label="How many days">${[7,14,30,90].map(n => `<option value="${n}"${n === wkRange ? ' selected' : ''}>${n} d</option>`).join('')}</select>` +
-      `<label class="wkb" title="Show the past days ending today (measured weather, wind and waves)"><input type="checkbox"${wkBack ? ' checked' : ''}> Lookback</label>` +
+      `<label class="wkb" title="Show the past days ending today (measured weather, wind and waves)"><input type="checkbox"${wkBack ? ' checked' : ''}> Lookback</label>` + fcSelects() +
       `<button type="button" class="visbtn" aria-expanded="${!wkNoVis}" title="${wkNoVis ? 'Show the days and the weather, wind, wave and tide pictures' : 'Fold the forecast down to one button'}">${wkNoVis ? 'Forecast ▸' : 'Forecast ▾'}</button></div>` +
     (wkVisual('legend') ? `<div class="wxd wxlab">${wkVisual('legend')}<span class="dn-sp"></span></div>` : '') +
     keys.map((k, i) => { const nm = dlabel(k);
