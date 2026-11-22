@@ -1071,27 +1071,52 @@ for (const c of WATER_CAMS){
 const fuelLayer = L.layerGroup();
 const setFuelStatus = addOverlay('fuel', 'Marine fuel docks', 'Fuel docks and marinas selling fuel · OpenStreetMap', fuelLayer, false);
 const fuelIcon = L.divIcon({className:'fuelico', html:'<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M5 3h8a1 1 0 0 1 1 1v7h1a2 2 0 0 1 2 2v4a1 1 0 0 0 2 0V9.4l-2.7-2.7 1.4-1.4 3 3A1 1 0 0 1 21 9v8a3 3 0 0 1-6 0v-4h-1v7H4V4a1 1 0 0 1 1-1zm1 2v5h6V5H6z"/></svg>', iconSize:[26,26], iconAnchor:[13,13]});
-let fuelLoaded = false;
+// Known fuel docks, always shown (positions from marina listings; a few are approximate, marked ~)
+const FUEL_DOCKS = [
+  {name:'False Creek Fuels', lat:49.2747, lon:-123.1370, fuels:'Gas · Diesel', phone:'604-638-0209', web:'https://www.falsecreekfuels.com', note:'Entrance to False Creek'},
+  {name:"Sewell's Marina fuel dock", lat:49.3765, lon:-123.2735, fuels:'Gas · Diesel', web:'https://www.sewellsmarina.com', note:'Horseshoe Bay (position ~)'},
+  {name:"Fisherman's Cove Marine Fuels", lat:49.3545, lon:-123.2720, phone:'604-921-7333', note:'5908 Marine Dr, West Vancouver (position ~)'},
+  {name:'Chevron marine – Coal Harbour', lat:49.2905, lon:-123.1240, note:'Coal Harbour, Vancouver (position ~)'},
+  {name:'Chevron marine – Steveston', lat:49.1245, lon:-123.1850, note:'Steveston Harbour (position ~)'},
+  {name:'Reed Point Marina fuel dock', lat:49.2905, lon:-122.8880, fuels:'Premium gas · Diesel', web:'https://reedpoint.com', note:'Port Moody (position ~)'},
+  {name:'Departure Bay Fuel Dock', lat:49.1840, lon:-123.9480, fuels:'Gas · Diesel', note:'North end of Newcastle Island Passage, Nanaimo (position ~)'},
+  {name:"Page's Marina – Silva Bay", lat:49.1490, lon:-123.6970, fuels:'Premium gas · Diesel', vhf:'66A', note:'Gabriola Island, open year round (position ~)'},
+  {name:'Fairwinds Marina @ Schooner Cove', lat:49.2864, lon:-124.1353, fuels:'Gas · Diesel', phone:'250-468-5364', vhf:'66', web:'https://www.fairwinds.ca', note:'Nanoose Bay'}
+];
+function fuelPopup(d){
+  return `<b>${esc2(d.name)}</b>` + (d.note ? `<br><span class="note">${esc2(d.note)}</span>` : '') + (d.fuels ? `<br>${esc2(d.fuels)}` : '') +
+    (d.hours ? `<br><span class="note">Hours: ${esc2(d.hours)}</span>` : '') + (d.phone ? `<br>📞 <span class="sel">${esc2(d.phone)}</span>` : '') +
+    (d.vhf ? `<br>VHF ${esc2(d.vhf)}` : '') + (d.web ? `<br><a href="${esc2(d.web)}" target="_blank" rel="noopener">Website ↗</a>` : '') +
+    `<br><span class="note">Call ahead: hours and fuel change by season.</span>`;
+}
+let fuelLoaded = false, fuelBusy = false;
 async function loadFuel(){
-  if (fuelLoaded) return;
+  if (fuelLoaded || fuelBusy) return;
+  fuelBusy = true;
   const b = '49.0,-124.95,49.62,-122.8';
   const q = `[out:json][timeout:25];(nwr["waterway"="fuel"](${b});nwr["amenity"="fuel"]["boat"="yes"](${b});nwr["amenity"="fuel"]["motorboat"="yes"](${b});nwr["seamark:small_craft_facility:category"~"fuel"](${b}););out center tags;`;
-  setFuelStatus('wait', 'loading');
+  fuelLayer.clearLayers();
+  const placed = FUEL_DOCKS.map(d => (L.marker([d.lat, d.lon], {icon:fuelIcon, title:d.name}).bindPopup(fuelPopup(d)).addTo(fuelLayer), [d.lat, d.lon]));
+  setFuelStatus('ok', placed.length + ' docks · checking for more');
   let data = null;
   try { const c = JSON.parse(localStorage.getItem('fuel-cache') || 'null'); if (c && Date.now() - c.at < 7*864e5) data = c.data; } catch(e){}
   if (!data){
-    for (const host of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']){
-      try { const r = await fetch(host, {method:'POST', body:'data=' + encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'}}); if (r.ok){ data = (await r.json()).elements; break; } } catch(e){}
+    // Several public OpenStreetMap servers; each gets 15 s before moving on to the next
+    for (const host of ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']){
+      const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 15000);
+      try { const r = await fetch(host + '?data=' + encodeURIComponent(q), {signal: ac.signal}); if (r.ok){ const j = await r.json(); if (Array.isArray(j.elements)){ data = j.elements; break; } } } catch(e){}
+      finally { clearTimeout(tm); }
     }
     if (data) try { localStorage.setItem('fuel-cache', JSON.stringify({at: Date.now(), data})); } catch(e){}
   }
-  if (!data){ setFuelStatus('bad', 'failed'); return; }
-  fuelLoaded = true; fuelLayer.clearLayers();
+  if (!data){ setFuelStatus('ok', placed.length + ' docks'); fuelBusy = false; return; }   // the built-in list still shows
+  fuelLoaded = true;
   const seen = new Set();
+  const near = (a, b) => Math.abs(a[0] - b[0]) < 0.004 && Math.abs(a[1] - b[1]) < 0.006;
   for (const el of data){
     const lat = el.lat ?? el.center?.lat, lon = el.lon ?? el.center?.lon, t = el.tags || {};
     if (lat == null) continue;
-    const key = lat.toFixed(3) + ',' + lon.toFixed(3); if (seen.has(key)) continue; seen.add(key);
+    const key = lat.toFixed(3) + ',' + lon.toFixed(3); if (seen.has(key) || placed.some(p => near(p, [lat, lon]))) continue; seen.add(key); placed.push([lat, lon]);
     const name = t.name || t.brand || t.operator || 'Fuel dock';
     const fuels = [['fuel:diesel','Diesel'],['fuel:octane_87','Gas 87'],['fuel:octane_89','Gas 89'],['fuel:octane_91','Gas 91'],['fuel:octane_94','Gas 94'],['fuel:marine_diesel','Marine diesel']].filter(([k]) => t[k] === 'yes').map(([, v]) => v);
     const web = t.website || t['contact:website'], phone = t.phone || t['contact:phone'];
@@ -1105,7 +1130,7 @@ async function loadFuel(){
         `<br><span class="note">Call ahead: hours and fuel change by season. From OpenStreetMap.</span>`)
       .addTo(fuelLayer);
   }
-  setFuelStatus(seen.size ? 'ok' : 'warn', seen.size + ' docks');
+  setFuelStatus('ok', placed.length + ' docks');
 }
 map.on('overlayadd layeradd', e => { if (e.layer === fuelLayer) loadFuel(); });
 
