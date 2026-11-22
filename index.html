@@ -341,6 +341,7 @@ aside .cal-lab .lab,aside .cal-lab .tt{font-size:7.5px}
 .cal-c .bk .wd .dir{line-height:10px}
 .cal-c .b4{height:42px !important}
 .cal-lab .b4.lab span:last-child{height:19px !important}
+.camsnaps{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;margin:6px 0}.camsnaps img{width:100%;height:auto;display:block;border-radius:3px;background:#0002;min-height:60px}
 .camico{display:flex;align-items:center;justify-content:center;background:#0b3954;color:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .cal-tide{font-size:13px;color:var(--muted);padding:6px 4px;white-space:nowrap}
 .cal-bar #cal-wx{margin-left:auto}
@@ -1035,25 +1036,27 @@ const WATER_CAMS = [
   {name:'Jericho Sailing Centre', area:'English Bay, south shore', lat:49.2725, lon:-123.1935, src:'earthTV', url:'https://www.earthtv.com/en/webcam/vancouver-jericho-sailing-centre', alt:{label:'Jericho Sailing Centre conditions & HD cam', url:'https://jsca.bc.ca/'}},
   {name:'English Bay', area:'West End beach looking out to the anchorage', lat:49.2865, lon:-123.1435, src:'SkylineWebcams', url:'https://www.skylinewebcams.com/webcam/canada/british-columbia/vancouver/vancouver-english-bay.html'},
   {name:'English Bay & False Creek', area:'Sunset Beach, Kits Point, Burrard Marina', lat:49.2795, lon:-123.1385, src:'tabi.cam', url:'https://tabi.cam/canada/vancouver-english-bay-281295'},
-  {name:'Ambleside – Hollyburn Sailing Club', area:'West Vancouver, looking south over English Bay', lat:49.3245, lon:-123.1555, src:'Windy webcams', url:'https://www.windy.com/-Webcams/Canada/British-Columbia/West-Vancouver/Hollyburn-Sailing-Club/webcams/1217348947'},
+  {name:'Ambleside – Hollyburn Sailing Club', area:'West Vancouver, looking south over English Bay', lat:49.3245, lon:-123.1555, src:'Windy webcams', url:'https://www.windy.com/-Webcams/Canada/British-Columbia/West-Vancouver/Hollyburn-Sailing-Club/webcams/1217348947', snaps:['https://imgproxy.windy.com/_/full/plain/current/1217348947/original.jpg']},
   {name:'Vancouver Harbour', area:'Burrard Inlet, Coal Harbour to the North Shore', lat:49.2895, lon:-123.1125, src:'WorldCams', url:'https://worldcams.tv/canada/vancouver/port'},
-  {name:'Horseshoe Bay ferry terminal', area:'Howe Sound entrance', lat:49.3745, lon:-123.2725, src:'BC Ferries', url:'https://www.bcferries.com/current-conditions/webcams?terminalCode=HSB', ferry:true},
-  {name:'Snug Cove ferry terminal', area:'Bowen Island', lat:49.3795, lon:-123.3315, src:'BC Ferries', url:'https://www.bcferries.com/current-conditions/BOW-HSB', ferry:true},
-  {name:'Langdale ferry terminal', area:'Howe Sound, Sunshine Coast side', lat:49.4345, lon:-123.4735, src:'BC Ferries', url:'https://www.bcferries.com/current-conditions/webcams?terminalCode=LNG', ferry:true},
-  {name:'Departure Bay ferry terminal', area:'Nanaimo', lat:49.1935, lon:-123.9545, src:'BC Ferries', url:'https://www.bcferries.com/current-conditions/webcams?terminalCode=NAN', ferry:true},
-  {name:'Duke Point ferry terminal', area:'Nanaimo, south', lat:49.1625, lon:-123.8905, src:'BC Ferries', url:'https://www.bcferries.com/current-conditions/webcams?terminalCode=DUK', ferry:true},
+  {name:'Horseshoe Bay ferry terminal', area:'Howe Sound entrance', lat:49.3745, lon:-123.2725, src:'BC Ferries', url:'https://www.bcferries.com/current-conditions/webcams?terminalCode=HSB', ferry:true, snaps:[1,2,3,4].map(n => 'https://ccimg.bcferries.com/cc/support/terminals/cam'+n+'_HSB.jpg')},
+  {name:'Snug Cove ferry terminal', area:'Bowen Island', lat:49.3795, lon:-123.3315, src:'BC Ferries', url:'https://www.bcferries.com/current-conditions/BOW-HSB', ferry:true, snaps:[1,2,3,4].map(n => 'https://ccimg.bcferries.com/cc/support/terminals/cam'+n+'_BOW.jpg')},
+  {name:'Langdale ferry terminal', area:'Howe Sound, Sunshine Coast side', lat:49.4345, lon:-123.4735, src:'BC Ferries', url:'https://www.bcferries.com/current-conditions/webcams?terminalCode=LNG', ferry:true, snaps:[1,2,3,4].map(n => 'https://ccimg.bcferries.com/cc/support/terminals/cam'+n+'_LNG.jpg')},
+  {name:'Departure Bay ferry terminal', area:'Nanaimo', lat:49.1935, lon:-123.9545, src:'BC Ferries', url:'https://www.bcferries.com/current-conditions/webcams?terminalCode=NAN', ferry:true, snaps:[1,2,3,4].map(n => 'https://ccimg.bcferries.com/cc/support/terminals/cam'+n+'_NAN.jpg')},
+  {name:'Duke Point ferry terminal', area:'Nanaimo, south', lat:49.1625, lon:-123.8905, src:'BC Ferries', url:'https://www.bcferries.com/current-conditions/webcams?terminalCode=DUK', ferry:true, snaps:[1,2,3,4].map(n => 'https://ccimg.bcferries.com/cc/support/terminals/cam'+n+'_DUK.jpg')},
   {name:'Nanaimo Harbour', area:'Port Theatre rooftop, looking over the harbour', lat:49.1665, lon:-123.9355, src:'CHEK News', url:'https://www.cheknews.ca/chek-harbour-cams-24-7-livestreams-from-victoria-and-nanaimo/', note:'CHEK has said this camera is sometimes down for building work.'}
 ];
 const camLayer = L.layerGroup();
 addOverlay('cams', 'Water cameras', 'Public webcams looking at the water · tap one to open its live view', camLayer, false)('ok', WATER_CAMS.length + ' cams');
 const camIcon = L.divIcon({className:'camico', html:'<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zm8 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>', iconSize:[26,26], iconAnchor:[13,13]});
+// Snapshot pictures load fresh each time a camera is opened; any that fail to load just disappear
+const camSnaps = c => c.snaps ? `<div class="camsnaps">${c.snaps.map(u => `<a href="${u}?t=${Date.now()}" target="_blank" rel="noopener"><img src="${u}?t=${Date.now()}" alt="${c.name} camera" loading="lazy" onerror="this.parentElement.remove()"></a>`).join('')}</div>` : '';
 for (const c of WATER_CAMS){
   L.marker([c.lat, c.lon], {icon:camIcon, title:c.name, keyboard:true})
-    .bindPopup(`<b>${c.name}</b><br><span class="note">${c.area}</span><br>` +
+    .bindPopup(() => `<b>${c.name}</b><br><span class="note">${c.area}</span>` + camSnaps(c) + (c.snaps ? '' : '<br>') +
       `<a href="${c.url}" target="_blank" rel="noopener">Open live camera ↗</a> <span class="note">· ${c.src}</span>` +
       (c.alt ? `<br><a href="${c.alt.url}" target="_blank" rel="noopener">${c.alt.label} ↗</a>` : '') +
       (c.ferry ? `<br><span class="note">Terminal camera: mostly the vehicle lanes, with sky and water behind.</span>` : '') +
-      (c.note ? `<br><span class="note">${c.note}</span>` : ''))
+      (c.note ? `<br><span class="note">${c.note}</span>` : ''), {maxWidth: 340, minWidth: 260})
     .addTo(camLayer);
 }
 
