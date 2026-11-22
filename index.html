@@ -348,6 +348,7 @@ aside .cal-lab .lab,aside .cal-lab .tt{font-size:7.5px}
 .fcspot,.fcmodel{font:600 11px var(--sans);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:2px;max-width:100%}
 .cal-lab .b4.lab span:last-child{height:19px !important}
 .camsnaps{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;margin:6px 0}.camsnaps img{width:100%;height:auto;display:block;border-radius:3px;background:#0002;min-height:60px}
+a.tel{font-weight:600;white-space:nowrap}
 .fuelico{display:flex;align-items:center;justify-content:center;background:#c25e00;color:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .camico{display:flex;align-items:center;justify-content:center;background:#0b3954;color:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .cal-tide{font-size:13px;color:var(--muted);padding:6px 4px;white-space:nowrap}
@@ -1078,17 +1079,19 @@ const FUEL_DOCKS = [
   {name:"Fisherman's Cove Marine Fuels", lat:49.3555, lon:-123.2751, fuels:'Gas · Diesel', phone:'604-921-7333', note:'Fisherman\'s Cove, 5908 Marine Dr, West Vancouver'},
   {name:'Sunset Marina', lat:49.4044, lon:-123.2440, phone:'604-921-7476', web:'https://sunsetmarina.ca', note:'34 Sunset Beach, West Vancouver (Howe Sound) · confirm fuel by phone'},
   {name:'Vancouver Marina fuel dock', lat:49.1795, lon:-123.1300, phone:'604-278-3300', web:'https://www.vancouvermarina.com', note:'Middle Arm of the Fraser, 8211 River Rd, Richmond (position ~)'},
-  {name:'Chevron marine – Coal Harbour', lat:49.2905, lon:-123.1240, note:'Coal Harbour, Vancouver (position ~)'},
-  {name:'Chevron marine – Richmond (North Arm)', lat:49.2010, lon:-123.1290, note:'North Arm of the Fraser, across from Milltown Marina (position ~)'},
-  {name:'Chevron marine – Steveston', lat:49.1245, lon:-123.1850, note:'Steveston Harbour (position ~)'},
+  {name:'Chevron marine – Coal Harbour', lat:49.2905, lon:-123.1240, phone:'1-800-331-7353', phoneNote:'Chevron (Parkland) customer line', note:'Coal Harbour, Vancouver (position ~)'},
+  {name:'Chevron marine – Richmond (North Arm)', lat:49.2010, lon:-123.1290, phone:'1-800-331-7353', phoneNote:'Chevron (Parkland) customer line, not the dock itself', note:'North Arm of the Fraser, across from Milltown Marina (position ~)'},
+  {name:'Chevron marine – Steveston', lat:49.1245, lon:-123.1850, phone:'1-800-331-7353', phoneNote:'Chevron (Parkland) customer line', note:'Steveston Harbour (position ~)'},
   {name:'Reed Point Marina fuel dock', lat:49.2905, lon:-122.8880, fuels:'Premium gas · Diesel', web:'https://reedpoint.com', note:'Port Moody (position ~)'},
   {name:'Departure Bay Fuel Dock', lat:49.1840, lon:-123.9480, fuels:'Gas · Diesel', note:'North end of Newcastle Island Passage, Nanaimo (position ~)'},
   {name:"Page's Marina – Silva Bay", lat:49.1490, lon:-123.6970, fuels:'Premium gas · Diesel', vhf:'66A', note:'Gabriola Island, open year round (position ~)'},
   {name:'Fairwinds Marina @ Schooner Cove', lat:49.2864, lon:-124.1353, fuels:'Gas · Diesel', phone:'250-468-5364', vhf:'66', web:'https://www.fairwinds.ca', note:'Nanoose Bay'}
 ];
+// Tap to call: a tel: link that dials straight from a phone, with the number shown as text too
+const telLink = n => { const d = String(n).replace(/[^\d+]/g, ''), tel = d.startsWith('+') ? d : d.length === 10 ? '+1' + d : d.length === 11 && d[0] === '1' ? '+' + d : d; return `<a class="tel" href="tel:${tel}">${esc2(n)}</a>`; };
 function fuelPopup(d){
   return `<b>${esc2(d.name)}</b>` + (d.note ? `<br><span class="note">${esc2(d.note)}</span>` : '') + (d.fuels ? `<br>${esc2(d.fuels)}` : '') +
-    (d.hours ? `<br><span class="note">Hours: ${esc2(d.hours)}</span>` : '') + (d.phone ? `<br>📞 <span class="sel">${esc2(d.phone)}</span>` : '') +
+    (d.hours ? `<br><span class="note">Hours: ${esc2(d.hours)}</span>` : '') + (d.phone ? `<br>📞 ${telLink(d.phone)}${d.phoneNote ? ` <span class="note">(${esc2(d.phoneNote)})</span>` : ''}` : '') +
     (d.vhf ? `<br>VHF ${esc2(d.vhf)}` : '') + (d.web ? `<br><a href="${esc2(d.web)}" target="_blank" rel="noopener">Website ↗</a>` : '') +
     `<br><span class="note">Call ahead: hours and fuel change by season.</span>`;
 }
@@ -1127,7 +1130,7 @@ async function loadFuel(){
       .bindPopup(`<b>${esc2(name)}</b>` + (t.brand && t.brand !== name ? `<br><span class="note">${esc2(t.brand)}</span>` : '') +
         (fuels.length ? `<br>${fuels.join(' · ')}` : '') +
         (t.opening_hours ? `<br><span class="note">Hours: ${esc2(t.opening_hours)}</span>` : '') +
-        (phone ? `<br>📞 <span class="sel">${esc2(phone)}</span>` : '') +
+        (phone ? `<br>📞 ${telLink(phone)}` : '') +
         (t['seamark:radio_station:channel'] || t['vhf'] ? `<br>VHF ${esc2(t['seamark:radio_station:channel'] || t['vhf'])}` : '') +
         (web ? `<br><a href="${esc2(web)}" target="_blank" rel="noopener">Website ↗</a>` : '') +
         `<br><span class="note">Call ahead: hours and fuel change by season. From OpenStreetMap.</span>`)
