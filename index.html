@@ -2886,7 +2886,7 @@ const SYNC_KEYS = ['map-area','ais-cloud','cal-station','cal-wx','sos-name','sos
   obtn.addEventListener('click', async () => { try { await live.beforeSignOut(); } catch(e){} auth.signOut(); });   // remove your live position while still signed in
   auth.onAuthStateChanged(async user => {
     live.onUser(user);
-    if (!user){ docRef = null; sbtn.hidden = false; obtn.hidden = true; who.textContent = 'Settings are saved on this device only'; return; }
+    if (!user){ docRef = null; sbtn.hidden = false; obtn.hidden = true; who.textContent = 'Sign in with Google to save your settings across devices and use messaging'; return; }
     sbtn.hidden = true; obtn.hidden = false;
     who.dataset.name = user.displayName || user.email;
     who.textContent = who.dataset.name + ' · loading your settings…';
