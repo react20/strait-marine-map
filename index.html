@@ -419,7 +419,7 @@ a{color:var(--pin)}
       <div class="area-row"><span class="note">Map area:</span> <button type="button" class="linkbtn" id="area-set" title="Set your own map boundary (saved to your Google account when signed in)">Change map area</button> <button type="button" class="linkbtn" id="area-reset" hidden>Reset to Strait of Georgia</button><input type="hidden" id="map-area"></div>
     </div>
 
-    <section>
+    <section hidden>   <!-- base map is picked with the chip on the map -->
       <h2>Base map</h2>
       <div class="seg" id="basemaps"></div>
     </section>
@@ -681,7 +681,7 @@ function addOverlay(id, title, sub, layer, on=true){
 const baseChipLayer = L.layerGroup();
 baseChipLayer.on('add', () => { document.getElementById('basechip').hidden = false; });
 baseChipLayer.on('remove', () => { document.getElementById('basechip').hidden = true; });
-addOverlay('basechip', 'Base map chip', 'A base-map picker on the map itself', baseChipLayer)('ok', 'on map');
+addOverlay('basechip', 'Base map chip', 'The base-map picker on the map (the only place to change the base map)', baseChipLayer)('ok', 'on map');
 // Mark a tile layer's status from tile load results
 function watchTiles(layer, setStatus){
   let ok=0, bad=0;
